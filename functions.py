@@ -140,9 +140,9 @@ class ElectroThermalFunc():
             - 2 * (math.pi ** 2) * (x + y) * torch.sin(math.pi * x) * torch.sin(math.pi * y)
         )
     
-        # PDE residual:  -Δu + u - f = 0
+        # PDE residual:  Δu + u - f = 0
         # so the "loss" (residual) is
-        loss_volt = lap_volt - volt_this + f
+        loss_volt = lap_volt + volt_this - f
     
         # Optional: print statements for debugging
         print("graph.pos")
