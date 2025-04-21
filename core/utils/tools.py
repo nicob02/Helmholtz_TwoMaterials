@@ -64,14 +64,14 @@ def modelTrainer(config):
     
     for epoch in range(1, config.epchoes + 1):  # Creates different ic and solves the problem, does this epoch # of times
         
-        predicted = model(graph)
-       
-        # hard enforced boundary Ansatz
-        predicted = config.bc1(config.graph, predicted = predicted)
+        u_raw = model(graph)  
 
-        # 5) Loss = mean squared residual over ALL nodes
-        loss = config.pde(graph, values_this=predicted)
-        loss = torch.norm(loss)
+        # 3) Enforce Dirichlet BC = 0 via ansatz (or hard clamp)
+        u = config.bc1(graph, u_raw)
+
+        # 4) Compute PDE residual: -Δ u + u - f
+        res = config.pde(graph, values_this=u)       # uses laplacian_ad internally
+        loss = torch.norm(res)                       # L2 norm of residual
     
         config.optimizer.zero_grad()
         loss.backward()
