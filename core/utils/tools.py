@@ -73,7 +73,7 @@ def modelTrainer(config):
         loss = torch.norm(res)                       # L2 norm of residual
     
         config.optimizer.zero_grad()
-        loss.backward()
+        loss.backward(retain_graph=True)
         config.optimizer.step()
         scheduler.step()
         
