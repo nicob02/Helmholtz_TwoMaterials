@@ -56,7 +56,7 @@ setattr(test_config, 'density', dens)
 #-----------------------------------------
 
 print('************* model test starts! ***********************')
-predict_results = modelTester(test_config)
+predicted_results = modelTester(test_config)
 
 
 # 2) Compute exact & error
