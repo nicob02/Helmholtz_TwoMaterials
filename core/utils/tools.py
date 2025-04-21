@@ -59,7 +59,7 @@ def modelTrainer(config):
     - 2 * (math.pi ** 2) * (x + y) * torch.sin(math.pi * x) * torch.sin(math.pi * y)
     )
 
-    graph.x = torch.cat([x, y, f], dim=-1)  # shape [N,3]
+    graph.x = torch.cat([graph.pos, f], dim=-1)  # shape [N,3]
     
     for epoch in range(1, config.epchoes + 1):  # Creates different ic and solves the problem, does this epoch # of times
         
