@@ -48,7 +48,7 @@ def modelTrainer(config):
     graph = config.graph
     scheduler = torch.optim.lr_scheduler.StepLR(
         config.optimizer, step_size=config.lrstep, gamma=0.99)  
-    
+    config.optimizer.zero_grad()
     best_loss  = np.inf
     # 1) Build fixed node features once: [x, y, f]
     x = graph.pos[:,0:1]
@@ -61,7 +61,7 @@ def modelTrainer(config):
     )
 
     graph.x = torch.cat([x, y, f], dim=-1)  # shape [N,3]
-
+    
     for epoch in range(1, config.epchoes + 1):  # Creates different ic and solves the problem, does this epoch # of times
         
         predicted = model(graph)
