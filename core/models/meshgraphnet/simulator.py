@@ -31,7 +31,7 @@ class Simulator(nn.Module):
 
     def forward(self, graph:Data, **argv):
         
-        predicted = self.model(graph)  
+        u = self.model(graph)  
         
         return predicted
     
