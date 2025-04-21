@@ -89,8 +89,8 @@ def modelTester(config):
     
     delta_t = config.delta_t
     model = config.model.to(config.device)
-    config.graph = config.graph.to(config.device)
-
+    graph = config.graph
+        
 
     test_steps = config.test_steps   
        
