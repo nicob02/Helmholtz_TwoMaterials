@@ -84,187 +84,80 @@ def modelTrainer(config):
     print('model saved at loss: %.4e' % loss)    
     print("Training completed!")
         
-@torch.no_grad()            # Disables gradient computations for evaluation
+@torch.no_grad()
 def modelTester(config):
-    
-    delta_t = config.delta_t
+    """
+    Single‐shot evaluation of the trained steady‐state GNN.
+    Returns:
+      u_pred (numpy array [N,1]): Predicted solution at each mesh node.
+    """
+    # 1) Move model and graph to the right device
     model = config.model.to(config.device)
-    config.graph = config.graph.to(config.device)
-        
+    graph = config.graph.to(config.device)
 
-    test_steps = config.test_steps   
-       
-    
-    begin_time = 0
-    test_results = []
-    # 1) Build the node features exactly as in training
-    x = config.graph.pos[:, 0:1]
-    y = config.graph.pos[:, 1:2]
+    # 2) Build the fixed node features [x, y, f] exactly as in training
+    x = graph.pos[:, 0:1]
+    y = graph.pos[:, 1:2]
     f = (
         2 * math.pi * torch.cos(math.pi * y) * torch.sin(math.pi * x)
-        + 2 * math.pi * torch.cos(math.pi * x) * torch.sin(math.pi * y)
-        + (x + y) * torch.sin(math.pi * x) * torch.sin(math.pi * y)
-        - 2 * (math.pi ** 2) * (x + y) * torch.sin(math.pi * x) * torch.sin(math.pi * y)
+      + 2 * math.pi * torch.cos(math.pi * x) * torch.sin(math.pi * y)
+      + (x + y) * torch.sin(math.pi * x) * torch.sin(math.pi * y)
+      - 2 * (math.pi**2) * (x + y) * torch.sin(math.pi * x) * torch.sin(math.pi * y)
     )
-    config.graph.x = torch.cat([x, y, f], dim=-1)
-      
+    graph.x = torch.cat([x, y, f], dim=-1)
 
-    def predictor(model, graph, step):
-        this_time = begin_time + delta_t * step
-        predicted = model(graph)
-        predicted = config.bc1(config.graph, predicted = predicted)
+    # 3) Forward pass + boundary enforcement
+    u_raw  = model(graph)               # shape [N,1]
+    u_pred = config.bc1(graph, u_raw)   # apply ansatz/hard clamp
 
-        return predicted
-
-    for step in tqdm(range(1, test_steps + 1)):      
-        v = predictor(model, config.graph, step)
-        config.graph.x = v.detach()
-        v = v.clone().cpu().numpy()        
-        test_results.append(v)    
-    
-    v = np.stack(test_results, axis=0)   
-    return v
+    return u_pred.cpu().numpy()
 
 
-# Averages MSQR error over all nodes for each time step, then cumsum of all time steps normalized by #timesteps
-def rollout_error_test(predicteds, targets):
-    number_len = targets.shape[0] 
-    squared_diff = np.square(predicteds - targets).reshape(number_len, -1)   
-    loss = np.sqrt(np.cumsum(np.mean(squared_diff, axis=1), 
-                             axis=0)/np.arange(1, number_len + 1))  
-    return loss
+def compute_steady_error(u_pred, config):
+    """
+    Compute the relative L2 error between predicted and exact solutions.
+    Returns:
+      rel_l2_error (float)
+      u_exact      (numpy array [N,1])
+    """
+    graph = config.graph.to(config.device)
+    # exact_solution returns a tensor [N,1] on the same device
+    u_exact = config.func_main.exact_solution(graph).cpu().numpy()
+    # Relative L2 norm: ||u_pred - u_exact||_2 / ||u_exact||_2
+    num = np.linalg.norm(u_pred - u_exact)
+    den = np.linalg.norm(u_exact)
+    rel_l2 = num/den
+    return rel_l2, u_exact
 
 
-import os
-import numpy as np
-import matplotlib.pyplot as plt
-from tqdm import tqdm
-
-def render_results(predicteds, reals, graph):
-    if predicteds is None:
-        return
-    
-    # Extract node coordinates from the graph
+def render_results(u_pred, u_exact, graph, filename="steady_results.png"):
+    """
+    Scatter‐plot Exact, Predicted, and Absolute Error on the mesh nodes.
+    """
     pos = graph.pos.cpu().numpy()
-    x = pos[:, 0]
-    y = pos[:, 1]
-    
-    os.makedirs('images2', exist_ok=True)
-    
-    # Compute absolute differences
-    diffs = np.abs(predicteds - reals)
-    
-    # Set up range for 'Exact' and 'Predicted'
-    # (Assuming your data is physically within [0,1] for Volts)
-    vmin_val, vmax_val = 0.0, 1.0
+    x, y = pos[:,0], pos[:,1]
+    error = np.abs(u_exact - u_pred)
 
-    # Differences might exceed 0‒1, so we derive from the data
-    diff_max = np.max(diffs[:, :, 0])
-    diff_min = np.min(diffs[:, :, 0])
+    fig, axes = plt.subplots(1, 3, figsize=(18,5))
 
-    # Render results for the first 5 steps (adjust if needed)
-    for index_ in tqdm(range(5)):
-        predicted = predicteds[index_]
-        real = reals[index_]
-        diff = diffs[index_]
+    # 1) Exact
+    sc0 = axes[0].scatter(x, y, c=u_exact.flatten(), cmap='viridis', s=5)
+    axes[0].set_title("Exact Solution")
+    plt.colorbar(sc0, ax=axes[0], shrink=0.7)
 
-        data_index = 0  # Visualizing the 0th component (e.g., temperature/voltage)
-        fig, axes = plt.subplots(1, 3, figsize=(16, 5))
+    # 2) Predicted
+    sc1 = axes[1].scatter(x, y, c=u_pred.flatten(), cmap='viridis', s=5)
+    axes[1].set_title("GNN Prediction")
+    plt.colorbar(sc1, ax=axes[1], shrink=0.7)
 
-        for idx, ax in enumerate(axes):
-            # Label the axes for each subplot
-            ax.set_xlabel('x(m)')
-            ax.set_ylabel('y(m)')
+    # 3) Absolute Error
+    sc2 = axes[2].scatter(x, y, c=error.flatten(), cmap='magma', s=5)
+    axes[2].set_title("Absolute Error")
+    plt.colorbar(sc2, ax=axes[2], shrink=0.7)
 
-            if idx == 0:
-                # Exact
-                s_r = ax.scatter(
-                    x, y, c=real[:, data_index], alpha=0.95, cmap='seismic',
-                    marker='s', s=5, vmin=vmin_val, vmax=vmax_val
-                )
-                ax.set_title('Exact', fontsize=10)
-                cb = plt.colorbar(s_r, ax=ax)
-                cb.set_label('', labelpad=-30, rotation=0, fontsize=10, loc='top')
-            elif idx == 1:
-                # Predicted
-                s_p = ax.scatter(
-                    x, y, c=predicted[:, data_index], alpha=0.95, cmap='seismic',
-                    marker='s', s=5, vmin=vmin_val, vmax=vmax_val
-                )
-                ax.set_title('Predicted', fontsize=10)
-                cb = plt.colorbar(s_p, ax=ax)
-                cb.set_label(' ', labelpad=-30, rotation=0, fontsize=10, loc='top')
-            else:
-                # Difference
-                s_d = ax.scatter(
-                    x, y, c=diff[:, data_index], alpha=0.95, cmap='seismic',
-                    marker='s', s=5, vmin=diff_min, vmax=diff_max
-                )
-                ax.set_title('Difference', fontsize=10)
-                cb = plt.colorbar(s_d, ax=ax)
-                cb.set_label('', labelpad=-30, rotation=0, fontsize=10, loc='top')
+    for ax in axes:
+        ax.set_xlabel("x"); ax.set_ylabel("y")
 
-        # Save each figure to file
-        plt.savefig(f'images2/result{index_+1}.png', bbox_inches='tight')
-        plt.close()
-
-        
-def render_temperature(predicteds, graph):
-    test_begin_step = 0
-    if predicteds is None:
-        return
-    total_test_steps = predicteds.shape[0]
-    pos = graph.pos.cpu().numpy()
-
-    os.makedirs('images', exist_ok=True)
-    x = pos[:, 0]
-    y = pos[:, 1]
-
-    for index_ in tqdm(range(total_test_steps)):
-        #if index_ % 3 != 0:
-        #   continue
-        predicted = predicteds[index_]
-        
-        data_index = 0  #volt index
-
-        v_max = np.max(predicted[:,  data_index])
-        v_min = np.min(predicted[:,  data_index])
-
-        c = predicted[:, data_index:data_index+1]
-
-        fig, axes = plt.subplots(1, 1, figsize=(5, 4))
-        b = axes.scatter(x, y, c=c,  vmin=v_min, vmax=v_max, cmap="plasma")
-        fig.colorbar(b, ax=axes)
-        axes.set_xticks([])
-        axes.set_yticks([])
-        plt.savefig('images/result%dv_predict.png' %
-                    (test_begin_step+index_), bbox_inches='tight')
-        plt.close()
-
-def plot_error_curve(error, begin_step, config, save_dir):
-
-    delta_t = config.delta_t
-    number_len = error.shape[0]
-    fig, axes = plt.subplots(1, 1, figsize=(8,5))
-    axes.set_yscale("log")
-    axes.plot((begin_step + np.arange(number_len)) * delta_t, error)
-    axes.set_xlim(begin_step * delta_t, (begin_step + number_len) * delta_t)
-    axes.set_ylim(5e-5, 10)
-    axes.set_xlabel('time (s)')
-    axes.set_ylabel('RMSE')
-    
-    my_x1 = np.linspace(begin_step * delta_t, (begin_step + number_len - 1) * delta_t, 11)
-    plt.xticks(my_x1)
-    plt.title('Error Curve')
-    plt.savefig(save_dir + '%s_rollout_aRMSE_Reynold[%d]_area%s_dens[%d]_Steps[%d].png'%(config.name, \
-        config.Reynold, config.area, config.density, config.test_steps))
-    plt.close()       
-
-        
-
-        
-
-    
-    
-    
-
+    plt.tight_layout()
+    plt.savefig(filename, dpi=300)
+    plt.close(fig)
