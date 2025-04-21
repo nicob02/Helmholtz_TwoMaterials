@@ -48,7 +48,6 @@ def modelTrainer(config):
     graph = config.graph
     scheduler = torch.optim.lr_scheduler.StepLR(
         config.optimizer, step_size=config.lrstep, gamma=0.99)  
-    config.optimizer.zero_grad()
     best_loss  = np.inf
     # 1) Build fixed node features once: [x, y, f]
     x = graph.pos[:,0:1]
