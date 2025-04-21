@@ -52,14 +52,14 @@ def modelTrainer(config):
     # 1) Build fixed node features once: [x, y, f]
     x = graph.pos[:,0:1]
     y = graph.pos[:,1:2]
-    f = (
+    graph.x = (
     2 * math.pi * torch.cos(math.pi * y) * torch.sin(math.pi * x)
     + 2 * math.pi * torch.cos(math.pi * x) * torch.sin(math.pi * y)
     + (x + y) * torch.sin(math.pi * x) * torch.sin(math.pi * y)
     - 2 * (math.pi ** 2) * (x + y) * torch.sin(math.pi * x) * torch.sin(math.pi * y)
     )
-
-    graph.x = torch.cat([graph.pos, f], dim=-1)  # shape [N,3]
+    
+    graph.x = torch.cat([graph.pos, graph.x], dim=-1)  # shape [N,3]
     
     for epoch in range(1, config.epchoes + 1):  # Creates different ic and solves the problem, does this epoch # of times
         
