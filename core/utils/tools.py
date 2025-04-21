@@ -6,6 +6,7 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 import shutil
 import math
+from torch_geometric.data import Data
 
 def RemoveDir(filepath):
     '''
@@ -120,6 +121,18 @@ def compute_steady_error(u_pred, u_exact, config):
       rel_l2_error (float)
       u_exact      (numpy array [N,1])
     """
+     # 1) Convert predictions to NumPy if they're a torch Tensor
+    if isinstance(u_pred, torch.Tensor):
+        u_pred_np = u_pred.detach().cpu().numpy()
+    else:
+        u_pred_np = np.asarray(u_pred)
+
+    # 2) Convert exact values to NumPy if needed
+    if isinstance(u_exact, torch.Tensor):
+        u_exact_np = u_exact.detach().cpu().numpy()
+    else:
+        u_exact_np = np.asarray(u_exact)
+        
     # Relative L2 norm: ||u_pred - u_exact||_2 / ||u_exact||_2
     num = np.linalg.norm(u_pred - u_exact)
     den = np.linalg.norm(u_exact)
