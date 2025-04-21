@@ -95,19 +95,34 @@ class ElectroThermalFunc():
     
     def laplacian_ad(self, graph, u):
         
-        pos = graph.pos
+def laplacian_ad(self, graph, u):
+    pos = graph.pos
+    # Make sure pos is a leaf with grad enabled
+    if not pos.requires_grad:
         pos.requires_grad_()
-        
-        if not pos.requires_grad:
-            pos.requires_grad_()
-        grad_u = torch.autograd.grad(u, pos, grad_outputs=torch.ones_like(u), create_graph=True, retain_graph=True)[0]
-        lap = 0.0
-        
-        for i in range(pos.shape[1]):
-            grad2 = torch.autograd.grad(grad_u[:, i], pos, grad_outputs=torch.ones_like(grad_u[:, i]), create_graph=True, retain_graph=True)[0][:, i]
-            lap = lap + grad2
-            
-        return lap.unsqueeze(1)
+
+    # 1) First derivatives ∂u/∂pos
+    grad_u = torch.autograd.grad(
+        outputs=u,
+        inputs=pos,
+        grad_outputs=torch.ones_like(u),
+        create_graph=True,
+        retain_graph=True,      # <— keep this graph around
+    )[0]
+
+    lap = torch.zeros_like(u)
+    # 2) Second derivatives ∂²u/∂x², ∂²u/∂y²
+    for i in range(pos.shape[1]):
+        grad2 = torch.autograd.grad(
+            outputs=grad_u[:, i],
+            inputs=pos,
+            grad_outputs=torch.ones_like(grad_u[:, i]),
+            create_graph=True,
+            retain_graph=True,    # <— **also** retain here
+        )[0][:, i:i+1]          # keep as column vector
+        lap = lap + grad2
+
+    return lap
 
     
     def pde(self, graph, values_this, **argv):
