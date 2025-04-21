@@ -5,6 +5,7 @@ import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import shutil
+import math
 
 def RemoveDir(filepath):
     '''
@@ -43,73 +44,43 @@ def parse_config(file='config.json'):
 
 def modelTrainer(config):
     
-    delta_t = config.delta_t
     model = config.model
     graph = config.graph
     scheduler = torch.optim.lr_scheduler.StepLR(
         config.optimizer, step_size=config.lrstep, gamma=0.99)  
     
     best_loss  = np.inf
-    
-    for epcho in range(1, config.epchoes + 1):  # Creates different ic and solves the problem, does this epoch # of times
+    # 1) Build fixed node features once: [x, y, f]
+    x = graph.pos[:,0:1]
+    y = graph.pos[:,1:2]
+    f = (
+    2 * math.pi * torch.cos(math.pi * y) * torch.sin(math.pi * x)
+    + 2 * math.pi * torch.cos(math.pi * x) * torch.sin(math.pi * y)
+    + (x + y) * torch.sin(math.pi * x) * torch.sin(math.pi * y)
+    - 2 * (math.pi ** 2) * (x + y) * torch.sin(math.pi * x) * torch.sin(math.pi * y)
+    )
 
-        graph.x = config.ic(graph.pos)
- 
-        begin_time = 0
-        total_steps_loss = 0
-        on_boundary = torch.squeeze(graph.node_type == config.NodeTypesRef.boundary)  
-        config.optimizer.zero_grad()
-        config.graph_modify(config.graph, value_last=graph.x)
-        losses = {}
-        for step in range(1, config.train_steps + 1):      # Goes through the whole simulation for that epoch   
+    graph.x = torch.cat([x, y, f], dim=-1)  # shape [N,3]
 
-            
-            this_time = begin_time + delta_t * step            
-            
-            #value_last = graph.x.detach().clone()
-            #graph.x = config.bc1(config.graph, predicted = value_last)
-            
-            
-            
-            predicted = model(graph)
-           
-            # hard enforced boundary Ansatz
-            predicted = config.bc1(config.graph, predicted = predicted)
+    for epoch in range(1, config.epchoes + 1):  # Creates different ic and solves the problem, does this epoch # of times
         
-            #predicted[on_boundary] = boundary_value[on_boundary] 
+        predicted = model(graph)
+       
+        # hard enforced boundary Ansatz
+        predicted = config.bc1(config.graph, predicted = predicted)
 
-            loss = config.pde(graph, values_this=predicted)
-
-            #loss[on_boundary] = 0        # TAKE THE HARD-ENFORCED OUT LATER TO COMPARE DIFFERENCE
-         
-            # Aggregate the loss components
-            #loss = torch.norm(loss)/loss.numel()
-            loss = torch.norm(loss)
+        # 5) Loss = mean squared residual over ALL nodes
+        loss = config.pde(graph, values_this=predicted)
+        loss = torch.norm(loss)
     
-                
-            loss.backward()
-            #graph.x = predicted.detach()
-
+        config.optimizer_grad()
+        loss.backward()
         config.optimizer.step()
 
-            
-            #losses.update({"step%d" % step: loss.detach()})
-            #total_steps_loss += loss.item()/config.train_steps
-            #torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-            
-        #config.writer.add_scalars("loss", losses, epcho)
-        #config.writer.add_scalar("total_steps_loss", total_steps_loss, epcho)
-        #config.writer.flush()
-        #config.optimizer.step()       # Updates the state's model paramaters
-        
-        if total_steps_loss < best_loss:
-            best_loss  = total_steps_loss
-            model.save_model(config.optimizer)
-            print('model saved at loss: %.4e' % best_loss) 
-            
-        scheduler.step()       
-        
-    print('Training completed! Model saved to %s'%config.model.model_dir)
+        if epoch % 500 == 0:
+            print(f"[Epoch {epoch:4d}] Loss = {loss.item():.3e}")
+         
+    print("Training completed!")
         
 @torch.no_grad()            # Disables gradient computations for evaluation
 def modelTester(config):
