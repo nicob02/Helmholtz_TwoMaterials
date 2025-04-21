@@ -89,7 +89,7 @@ def modelTester(config):
     
     delta_t = config.delta_t
     model = config.model.to(config.device)
-    graph = config.graph
+    config.graph = config.graph.to(config.device)
         
 
     test_steps = config.test_steps   
@@ -98,15 +98,15 @@ def modelTester(config):
     begin_time = 0
     test_results = []
     # 1) Build the node features exactly as in training
-    x = graph.pos[:, 0:1]
-    y = graph.pos[:, 1:2]
+    x = config.graph.pos[:, 0:1]
+    y = config.graph.pos[:, 1:2]
     f = (
         2 * math.pi * torch.cos(math.pi * y) * torch.sin(math.pi * x)
         + 2 * math.pi * torch.cos(math.pi * x) * torch.sin(math.pi * y)
         + (x + y) * torch.sin(math.pi * x) * torch.sin(math.pi * y)
         - 2 * (math.pi ** 2) * (x + y) * torch.sin(math.pi * x) * torch.sin(math.pi * y)
     )
-    graph.x = torch.cat([x, y, f], dim=-1)
+    config.graph.x = torch.cat([x, y, f], dim=-1)
       
 
     def predictor(model, graph, step):
