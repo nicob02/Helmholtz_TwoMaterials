@@ -1,6 +1,6 @@
 import torch
 from core.utils.tools import parse_config, modelTester, RemoveDir
-from core.utils.tools import rollout_error_test, plot_error_curve, render_results, render_temperature
+from core.utils.tools import compute_steady_error, render_results
 from core.models import msgPassing
 from core.geometry import ElectrodeMesh
 from functions import ElectroThermalFunc as Func
