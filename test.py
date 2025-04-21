@@ -59,8 +59,9 @@ print('************* model test starts! ***********************')
 predicted_results = modelTester(test_config)
 
 u_exact = func_main.exact_solution(graph)  
+u_exact_np  = u_exact_t.detach().cpu().numpy()
 # 2) Compute exact & error
-rel_l2 = compute_steady_error(predicted_results, u_exact, test_config)
+rel_l2 = compute_steady_error(predicted_results, u_exact_np, test_config)
 print(f"Relative L2 error: {rel_l2:.3e}")
 
 # 3) Render the three‐panel result
