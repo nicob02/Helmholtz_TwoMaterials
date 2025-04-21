@@ -65,5 +65,5 @@ rel_l2 = compute_steady_error(predicted_results, u_exact_np, test_config)
 print(f"Relative L2 error: {rel_l2:.3e}")
 
 # 3) Render the three‐panel result
-render_results(predicted_results, u_exact, config.graph, filename="helmholtz_steady.png")
+render_results(predicted_results, u_exact_np, graph, filename="helmholtz_steady.png")
 
