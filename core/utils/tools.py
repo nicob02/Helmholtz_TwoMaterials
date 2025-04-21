@@ -113,21 +113,18 @@ def modelTester(config):
     return u_pred.cpu().numpy()
 
 
-def compute_steady_error(u_pred, config):
+def compute_steady_error(u_pred, u_exact, config):
     """
     Compute the relative L2 error between predicted and exact solutions.
     Returns:
       rel_l2_error (float)
       u_exact      (numpy array [N,1])
     """
-    graph = config.graph.to(config.device)
-    # exact_solution returns a tensor [N,1] on the same device
-    u_exact = config.func_main.exact_solution(graph).cpu().numpy()
     # Relative L2 norm: ||u_pred - u_exact||_2 / ||u_exact||_2
     num = np.linalg.norm(u_pred - u_exact)
     den = np.linalg.norm(u_exact)
     rel_l2 = num/den
-    return rel_l2, u_exact
+    return rel_l2
 
 
 def render_results(u_pred, u_exact, graph, filename="steady_results.png"):
