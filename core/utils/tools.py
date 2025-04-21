@@ -81,7 +81,7 @@ def modelTrainer(config):
             print(f"[Epoch {epoch:4d}] Loss = {loss.item():.3e}")
             
     model.save_model(config.optimizer)
-    print('model saved at loss: %.4e' % best_loss)    
+    print('model saved at loss: %.4e' % loss)    
     print("Training completed!")
         
 @torch.no_grad()            # Disables gradient computations for evaluation
