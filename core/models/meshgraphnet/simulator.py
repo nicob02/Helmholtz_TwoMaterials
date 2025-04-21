@@ -32,6 +32,7 @@ class Simulator(nn.Module):
     def forward(self, graph:Data, **argv):
         
         predicted = self.model(graph)  
+        predicted.requires_grad_() 
         
         return predicted
     
