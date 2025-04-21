@@ -31,21 +31,9 @@ class Simulator(nn.Module):
 
     def forward(self, graph:Data, **argv):
         
-        graph_last = copy_geometric_data(graph)
-
-        if torch.isnan(graph.x).any():
-            print("Warning: NaN detected in graph.x after concatenation in Simulator")
-            
         predicted = self.model(graph)  
-        predicted.requires_grad_()
-
-        v = predicted[:, :self.ndim] + graph_last.x[:, :self.ndim] 
-        v.requires_grad_()
-        if torch.isnan(v).any():
-            print("Warning: NaN detected in final output v in Simulator")
-
         
-        return v
+        return predicted
     
     def save_model(self, optimizer=None):
         path = os.path.dirname(self.model_dir)
