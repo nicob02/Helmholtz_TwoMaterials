@@ -96,14 +96,15 @@ class ElectroThermalFunc():
     def laplacian_ad(self, graph, u):
         
         pos = graph.pos
+        pos.requires_grad_()
         
         if not pos.requires_grad:
             pos.requires_grad_()
-        grad_u = torch.autograd.grad(u, pos, grad_outputs=torch.ones_like(u), create_graph=True)[0]
+        grad_u = torch.autograd.grad(u, pos, grad_outputs=torch.ones_like(u), create_graph=True, retain_graph=True)[0]
         lap = 0.0
         
         for i in range(pos.shape[1]):
-            grad2 = torch.autograd.grad(grad_u[:, i], pos, grad_outputs=torch.ones_like(grad_u[:, i]), create_graph=True)[0][:, i]
+            grad2 = torch.autograd.grad(grad_u[:, i], pos, grad_outputs=torch.ones_like(grad_u[:, i]), create_graph=True, retain_graph=True)[0][:, i]
             lap = lap + grad2
             
         return lap.unsqueeze(1)
