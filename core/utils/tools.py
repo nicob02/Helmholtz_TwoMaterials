@@ -73,7 +73,7 @@ def modelTrainer(config):
         loss = config.pde(graph, values_this=predicted)
         loss = torch.norm(loss)
     
-        config.optimizer_grad()
+        config.optimizer.zero_grad()
         loss.backward()
         config.optimizer.step()
 
