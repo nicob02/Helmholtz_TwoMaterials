@@ -115,30 +115,28 @@ def modelTester(config):
 
 
 def compute_steady_error(u_pred, u_exact, config):
-    """
-    Compute the relative L2 error between predicted and exact solutions.
-    Returns:
-      rel_l2_error (float)
-      u_exact      (numpy array [N,1])
-    """
-     # 1) Convert predictions to NumPy if they're a torch Tensor
+    # 1) Convert predictions to NumPy
     if isinstance(u_pred, torch.Tensor):
         u_pred_np = u_pred.detach().cpu().numpy()
     else:
-        u_pred_np = np.asarray(u_pred)
+        u_pred_np = np.array(u_pred, copy=False)
 
-    # 2) Convert exact values to NumPy if needed
+    # 2) Convert exact to NumPy
     if isinstance(u_exact, torch.Tensor):
         u_exact_np = u_exact.detach().cpu().numpy()
     else:
-        u_exact_np = np.asarray(u_exact)
-        
-    # Relative L2 norm: ||u_pred - u_exact||_2 / ||u_exact||_2
-    num = np.linalg.norm(u_pred - u_exact)
-    den = np.linalg.norm(u_exact)
-    rel_l2 = num/den
-    return rel_l2
+        u_exact_np = np.array(u_exact, copy=False)
 
+    # 3) Flatten both to 1D arrays
+    u_pred_flat  = u_pred_np.reshape(-1)
+    u_exact_flat = u_exact_np.reshape(-1)
+
+    # 4) Compute relative L2 norm
+    num   = np.linalg.norm(u_pred_flat - u_exact_flat)
+    denom = np.linalg.norm(u_exact_flat)
+    rel_l2 = num / (denom + 1e-16)  # small eps to avoid div0
+
+    return rel_l2
 
 def render_results(u_pred, u_exact, graph, filename="steady_results.png"):
     """
