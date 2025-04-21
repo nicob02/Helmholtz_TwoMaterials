@@ -58,22 +58,11 @@ setattr(test_config, 'density', dens)
 print('************* model test starts! ***********************')
 predict_results = modelTester(test_config)
 
-real_results = []
-# Can also later measure the time taken for this for loop to be completed vs the model predict_results time taken
-for step in range(1, test_config.test_steps +1):
-    #t = step * delta_t
-    v1 = func_main.exact_solution(graph)     # This I will surely have to modify the arguments
-    real_results.append(v1)
-real_results = torch.stack(real_results, dim=0).cpu().numpy()
 
+# 2) Compute exact & error
+rel_l2, u_exact = compute_steady_error(predicted_results, test_config)
+print(f"Relative L2 error: {rel_l2:.3e}")
 
-aRMSE = rollout_error_test(predict_results, real_results) 
-print("aRMSE")
-print(aRMSE)
+# 3) Render the three‐panel result
+render_results(predicted_results, u_exact, config.graph, filename="helmholtz_steady.png")
 
-#-----------------plotting----------------------------
-
-
-render_temperature(predict_results, graph)
-#render_temperature(real_results, graph)
-render_results(predict_results, real_results, graph)
