@@ -91,20 +91,26 @@ def modelTester(config):
 
 
     test_steps = config.test_steps   
-    config.graph.x = config.ic(config.graph.pos)    
+       
     
     begin_time = 0
     test_results = []
-    on_boundary = torch.squeeze(config.graph.node_type==config.NodeTypesRef.boundary)
+    # 1) Build the node features exactly as in training
+    x = graph.pos[:, 0:1]
+    y = graph.pos[:, 1:2]
+    f = (
+        2 * math.pi * torch.cos(math.pi * y) * torch.sin(math.pi * x)
+        + 2 * math.pi * torch.cos(math.pi * x) * torch.sin(math.pi * y)
+        + (x + y) * torch.sin(math.pi * x) * torch.sin(math.pi * y)
+        - 2 * (math.pi ** 2) * (x + y) * torch.sin(math.pi * x) * torch.sin(math.pi * y)
+    )
+    graph.x = torch.cat([x, y, f], dim=-1)
       
 
     def predictor(model, graph, step):
         this_time = begin_time + delta_t * step
-        config.graph_modify(config.graph, value_last=graph.x)
         predicted = model(graph)
         predicted = config.bc1(config.graph, predicted = predicted)
-        #boundary_value = config.bc1(config.graph, predicted = predicted) 
-        #predicted[on_boundary] = boundary_value[on_boundary]
 
         return predicted
 
