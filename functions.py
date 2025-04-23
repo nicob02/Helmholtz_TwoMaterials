@@ -6,7 +6,7 @@ import math
 
 class ElectroThermalFunc(): 
 
-    func_name = 'rfa'
+    func_name = 'Helmholtz'
     def __init__(self, delta_t, params) -> None:
         self.delta_t = delta_t
         self.params = params
