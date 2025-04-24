@@ -6,8 +6,6 @@ from functions import ElectroThermalFunc as Func
 import os
 from functions import MagneticFunc as Func
 import matplotlib.pyplot as plt
-from functions import MagneticFunc
-
 
 out_ndim = 1
 
