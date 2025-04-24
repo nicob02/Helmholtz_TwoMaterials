@@ -3,8 +3,9 @@ from core.models import msgPassing
 from core.geometry import ElectrodeMesh
 from torch.utils.tensorboard import SummaryWriter
 from core.utils.tools import parse_config, modelTrainer
-from functions import ElectroThermalFunc as Func
+from functions import MagneticFunc as Func
 import matplotlib.pyplot as plt
+from functions import MagneticFunc
 
 device = torch.device(0)
 
@@ -12,15 +13,12 @@ delta_t = 1 # Mess around with this
 
 
 out_ndim = 1
-#poisson_params = 6.28318  #2pi, initial test case, change later.
-#poisson_params = 12.56637  #4pi, initial test case, change later.
-poisson_params = 25.13274  #8pi, initial test case, change later.
 ckptpath = 'checkpoint/simulator_%s.pth' % Func.func_name  
 
-func_main = Func(delta_t=delta_t, params=poisson_params)
+# 2) physics helper
+func_main = MagneticFunc(mu_in=3.0, mu_out=1.0,
+                    center=(0.5,0.5), radius=0.2, steep=500.0)
 
-ic = func_main.init_condition
-bc1 = func_main.boundary_condition
 
 model = msgPassing(message_passing_num=3, node_input_size=out_ndim+2, edge_input_size=3, 
                    ndim=out_ndim, device=device, model_dir=ckptpath)    # Mess with MPN# to 2 or 3, +3 comes from source + BC
@@ -85,7 +83,7 @@ setattr(train_config, 'graph', graph)
 setattr(train_config, 'model', model)
 setattr(train_config, 'optimizer', optimizer)
 setattr(train_config, 'train_steps', 1)    # 1 train step, extend this in the future to a dynamic source function that changes with time.
-setattr(train_config, 'epchoes', 5000)
+setattr(train_config, 'epchoes', 50)
 setattr(train_config, 'NodeTypesRef', ElectrodeMesh.node_type_ref) 
 setattr(train_config, 'step_times', 1)
 #setattr(train_config, 'name', func_name)
