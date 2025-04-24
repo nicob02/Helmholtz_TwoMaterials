@@ -15,7 +15,7 @@ dens=65
 ckptpath = 'checkpoint/simulator_%s.pth' % Func.func_name    #FIGURE THIS OUT
 device = torch.device(0)
 
-func_main = MagneticFunc(mu_in=3.0, mu_out=1.0,
+func_main = Func(mu_in=3.0, mu_out=1.0,
                     center=(0.5,0.5), radius=0.2, steep=500.0)
 
 mesh = ElectrodeMesh(ru=(1, 1), lb=(0, 0), density=65)
