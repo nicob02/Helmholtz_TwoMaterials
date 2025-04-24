@@ -13,7 +13,7 @@ ckptpath = 'checkpoint/simulator_%s.pth' % Func.func_name
 
 # 2) physics helper
 func_main = Func(mu_in=3.0, mu_out=1.0,
-                    center=(0.5,0.5), radius=0.2, steep=10.0)
+                    center=(0.5,0.5), radius=0.2, steep=5000.0)
 
 
 model = msgPassing(message_passing_num=3, node_input_size=out_ndim+2, edge_input_size=3, 
