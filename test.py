@@ -41,7 +41,7 @@ setattr(test_config, 'func_main', func_main)
 #-----------------------------------------
 
 print('************* model test starts! ***********************')
-H_Z = modelTester(test_config)
+H_z = modelTester(test_config)
 
 pos_np = graph.pos.cpu().numpy()
 x, y   = pos_np[:,0], pos_np[:,1]
