@@ -63,7 +63,7 @@ def modelTrainer(config):
         config.optimizer.zero_grad()
         loss.backward(retain_graph=True)
         config.optimizer.step()
-        scheduler.step()
+        sched.step()
         
         if epoch % 500 == 0:
             print(f"[Epoch {epoch:4d}] Loss = {loss.item():.3e}")
