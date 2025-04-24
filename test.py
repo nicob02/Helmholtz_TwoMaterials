@@ -42,7 +42,7 @@ setattr(test_config, 'density', dens)
 #-----------------------------------------
 
 print('************* model test starts! ***********************')
-predicted_results = modelTester(test_config)
+H_Z = modelTester(test_config)
 
 pos_np = graph.pos.cpu().numpy()
 x, y   = pos_np[:,0], pos_np[:,1]
@@ -50,8 +50,8 @@ x, y   = pos_np[:,0], pos_np[:,1]
 fig, axes = plt.subplots(1, 2, figsize=(12,5), tight_layout=True)
 
 # Hz
-sc0 = axes[0].scatter(x, y, c=V_pred.flatten(), cmap='viridis', s=5)
-axes[0].set_title("Predicted Voltage")
+sc0 = axes[0].scatter(x, y, c=H_z.flatten(), cmap='viridis', s=5)
+axes[0].set_title("Predicted H_z")
 axes[0].set_xlabel("x"); axes[0].set_ylabel("y")
 plt.colorbar(sc0, ax=axes[0], shrink=0.7)
 
