@@ -61,7 +61,7 @@ def modelTrainer(config):
         loss= torch.mean(r**2)
 
         config.optimizer.zero_grad()
-        loss.backward()
+        loss.backward(retain_graph=True)
         config.optimizer.step()
         scheduler.step()
         
