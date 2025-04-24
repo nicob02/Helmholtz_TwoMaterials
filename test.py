@@ -2,7 +2,6 @@ import torch
 from core.utils.tools import parse_config, modelTester, RemoveDir
 from core.utils.tools import compute_steady_error, render_results
 from core.models import msgPassing
-from functions import ElectroThermalFunc as Func
 import os
 from functions import MagneticFunc as Func
 import matplotlib.pyplot as plt
