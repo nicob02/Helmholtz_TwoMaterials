@@ -72,7 +72,6 @@ writer = SummaryWriter('runs/%s' % Func.func_name)
  
 setattr(train_config, 'pde', func_main.pde_residual)
 setattr(train_config, 'graph_modify', func_main.graph_modify)        
-setattr(train_config, 'delta_t', delta_t)
 setattr(train_config, 'graph', graph)
 setattr(train_config, 'model', model)
 setattr(train_config, 'optimizer', optimizer)
