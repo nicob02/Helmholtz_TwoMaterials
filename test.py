@@ -35,7 +35,7 @@ setattr(test_config, 'ndim', out_ndim)
 setattr(test_config, 'graph_modify', func_main.graph_modify)
 setattr(test_config, 'graph', graph)
 setattr(test_config, 'density', dens)
-
+setattr(test_config, 'func_main', func_main)
       
 
 #-----------------------------------------
