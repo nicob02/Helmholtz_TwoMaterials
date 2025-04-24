@@ -52,8 +52,7 @@ def modelTrainer(config):
 
     # 1) build static node features (mu, etc.)
     graph = physics.graph_modify(graph)
-
-    for epoch in range(1, config.epochs+1):
+    for epoch in range(1, config.epchoes + 1):
         raw = model(graph)                         # [N,1] raw Hz
         Hz  = physics._ansatz_Hz(graph, raw)       # hard‐BC
         
@@ -61,17 +60,17 @@ def modelTrainer(config):
         r   = physics.pde_residual(graph, Hz)      # [N,1]
         loss= torch.mean(r**2)
 
-        opt.zero_grad()
-        loss.backward()
-        opt.step()
-        sched.step()
-
-        if epoch % config.log_every == 0:
-            print(f"[Epoch {epoch:5d}]  loss = {loss:.3e}")
-
-    # save
-    model.save_model(opt)
-    print("Training done.")
+        config.optimizer.zero_grad()
+        loss.backward(retain_graph=True)
+        config.optimizer.step()
+        scheduler.step()
+        
+        if epoch % 500 == 0:
+            print(f"[Epoch {epoch:4d}] Loss = {loss.item():.3e}")
+            
+    model.save_model(config.optimizer)
+    print('model saved at loss: %.4e' % loss)    
+    print("Training completed!")
 
 @torch.no_grad()
 def modelTester(config):
