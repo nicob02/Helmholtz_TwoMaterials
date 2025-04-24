@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import shutil
 import math
 from torch_geometric.data import Data
+import torch.autograd as autograd
 
 def RemoveDir(filepath):
     '''
@@ -49,7 +50,8 @@ def modelTrainer(config):
     opt    = config.optimizer
     sched  = torch.optim.lr_scheduler.StepLR(opt,
                     step_size=config.lrstep, gamma=0.99)
-
+    
+    torch.autograd.set_detect_anomaly(True)
     # 1) build static node features (mu, etc.)
     graph = physics.graph_modify(graph)
     for epoch in range(1, config.epchoes + 1):
