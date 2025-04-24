@@ -5,7 +5,6 @@ from torch.utils.tensorboard import SummaryWriter
 from core.utils.tools import parse_config, modelTrainer
 from functions import MagneticFunc as Func
 import matplotlib.pyplot as plt
-from functions import MagneticFunc
 
 device = torch.device(0)
 
@@ -13,7 +12,7 @@ out_ndim = 1
 ckptpath = 'checkpoint/simulator_%s.pth' % Func.func_name  
 
 # 2) physics helper
-func_main = MagneticFunc(mu_in=3.0, mu_out=1.0,
+func_main = Func(mu_in=3.0, mu_out=1.0,
                     center=(0.5,0.5), radius=0.2, steep=500.0)
 
 
