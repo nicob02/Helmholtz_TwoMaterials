@@ -27,7 +27,7 @@ class MagneticFunc:
         x = graph.pos[:,0:1]
         y = graph.pos[:,1:2]
         # compute distance to center
-        r = torch.sqrt((x-self.cx)**2 + (y-self.cy)**2)
+         r = torch.sqrt((x-self.cx)**2 + (y-self.cy)**2 + 1e-6)
         h = torch.sigmoid((self.r0 - r)*self.steep)  # approx Heaviside(r<r0)
         mu = self.mu_out + (self.mu_in-self.mu_out)*h    # [N,1]
         graph.x = torch.cat([x, y, mu], dim=-1)  # [N,3]
