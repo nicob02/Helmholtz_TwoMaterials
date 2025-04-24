@@ -44,12 +44,17 @@ setattr(test_config, 'density', dens)
 print('************* model test starts! ***********************')
 predicted_results = modelTester(test_config)
 
-u_exact = func_main.exact_solution(graph)  
-u_exact_np  = u_exact.detach().cpu().numpy()
-# 2) Compute exact & error
-rel_l2 = compute_steady_error(predicted_results, u_exact_np, test_config)
-print(f"Relative L2 error: {rel_l2:.3e}")
+pos_np = graph.pos.cpu().numpy()
+x, y   = pos_np[:,0], pos_np[:,1]
 
-# 3) Render the three‐panel result
-render_results(predicted_results, u_exact_np, graph, filename="helmholtz_steady.png")
+fig, axes = plt.subplots(1, 2, figsize=(12,5), tight_layout=True)
 
+# Hz
+sc0 = axes[0].scatter(x, y, c=V_pred.flatten(), cmap='viridis', s=5)
+axes[0].set_title("Predicted Voltage")
+axes[0].set_xlabel("x"); axes[0].set_ylabel("y")
+plt.colorbar(sc0, ax=axes[0], shrink=0.7)
+
+plt.savefig("H_z.png", dpi=300)
+plt.close(fig)
+print("Done — predictions plotted to H_z.png")
