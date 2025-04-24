@@ -12,7 +12,7 @@ class MagneticFunc:
                  mu_out: float = 1.0,
                  center=(0.5,0.5),
                  radius=0.2,
-                 steep=500.0):
+                 steep=100.0):
         self.mu_in, self.mu_out = mu_in, mu_out
         self.cx, self.cy       = center
         self.r0                = radius
