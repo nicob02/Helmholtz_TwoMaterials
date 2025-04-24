@@ -12,23 +12,17 @@ class NodeType(IntEnum):
     boundary=1
 
 def get_node_type(pos, radius_ratio=None):
-    max_x = np.max(pos[:, 0])
-    max_y = np.max(pos[:, 1])
-    min_x = np.min(pos[:, 0])
-    min_y = np.min(pos[:, 1])
-    
-    right = np.isclose(pos[:, 0], max_x)
-    left = np.isclose(pos[:, 0], min_x)
-    up = np.isclose(pos[:, 1], max_y)
-    bottom = np.isclose(pos[:, 1], min_y)    
-    
-    on_boundary = np.logical_or(np.logical_or(right, left),np.logical_or(up, bottom))
-    
-    node_type = np.ones((pos.shape[0], 1))
-    node_type[on_boundary] = NodeType.boundary
-    node_type[np.logical_not(on_boundary)] = NodeType.inner
-        
-    return np.squeeze(node_type)
+    min_x, max_x = pos[:,0].min(), pos[:,0].max()
+    min_y, max_y = pos[:,1].min(), pos[:,1].max()
+    on_left   = np.isclose(pos[:,0], min_x)
+    on_right  = np.isclose(pos[:,0], max_x)
+    on_bottom = np.isclose(pos[:,1], min_y)
+    on_top    = np.isclose(pos[:,1], max_y)
+    on_bnd    = on_left|on_right|on_bottom|on_top
+
+    t = np.ones((pos.shape[0],), dtype=np.int64)*NodeType.inner
+    t[on_bnd] = NodeType.boundary
+    return t
     
 
 class ElectrodeMesh():
@@ -55,6 +49,5 @@ class ElectrodeMesh():
         graph = self.transform(graph)
         graph.num_nodes = graph.pos.shape[0]
         graph.node_type = torch.as_tensor(self.node_type)
-        graph.label = 0
         return graph
 
