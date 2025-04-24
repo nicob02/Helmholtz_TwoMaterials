@@ -5,7 +5,7 @@ from core.models import msgPassing
 import os
 from functions import MagneticFunc as Func
 import matplotlib.pyplot as plt
-
+from core.geometry import ElectrodeMesh
 out_ndim = 1
 
 dens=65
