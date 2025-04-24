@@ -2,28 +2,23 @@ import torch
 from core.utils.tools import parse_config, modelTester, RemoveDir
 from core.utils.tools import compute_steady_error, render_results
 from core.models import msgPassing
-from core.geometry import ElectrodeMesh
 from functions import ElectroThermalFunc as Func
 import os
-
+from functions import MagneticFunc as Func
+import matplotlib.pyplot as plt
+from functions import MagneticFunc
 
 
 
 delta_t = 1 # Mess around with this
-#poisson_params = 6.28318
-#poisson_params = 12.56637  #4pi, initial test case, change later.
-poisson_params = 25.13274  #8pi, initial test case, change later.
-#func_name = 'rfa'
 out_ndim = 1
 
 dens=65
 ckptpath = 'checkpoint/simulator_%s.pth' % Func.func_name    #FIGURE THIS OUT
 device = torch.device(0)
 
-func_main = Func(delta_t=delta_t, params=poisson_params)
-
-bc1 = func_main.boundary_condition
-ic = func_main.init_condition
+func_main = MagneticFunc(mu_in=3.0, mu_out=1.0,
+                    center=(0.5,0.5), radius=0.2, steep=500.0)
 
 mesh = ElectrodeMesh(ru=(1, 1), lb=(0, 0), density=65)
 graph = mesh.getGraphData()
