@@ -58,8 +58,7 @@ class MagneticFunc:
         grad_Hz = torch.autograd.grad(
             Hz, pos,
             grad_outputs=torch.ones_like(Hz),
-            create_graph=False,   # <— no graph!
-            retain_graph=False
+            create_graph=True,   # <— no graph!
         )[0]
 
         # 2) flux = mu * grad_Hz         [N,2]
@@ -71,8 +70,7 @@ class MagneticFunc:
             div_i = torch.autograd.grad(
                 flux[:,i:i+1], pos,
                 grad_outputs=torch.ones_like(flux[:,i:i+1]),
-                create_graph=False,   # <— no graph!
-                retain_graph=False
+                create_graph=True,   
             )[0][:,i:i+1]
             div = div + div_i
 
