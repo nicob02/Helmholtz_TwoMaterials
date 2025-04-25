@@ -4,78 +4,97 @@ from core.pde import laplacian, grad
 import numpy as np
 import math
 
-class MagneticFunc:
-    func_name = "magnetic_disc"
 
+class ElectroThermalFunc(): 
+
+    func_name = 'Helmholtz_Left'
     def __init__(self,
-                 mu_in: float = 3.0,
-                 mu_out: float = 1.0,
+                 eps=(4.0, 2.0, 1.0),
+                 k  =(20.0,10.0, 5.0),
                  center=(0.5,0.5),
-                 radius=0.2,
-                 steep=5.0):
-        self.mu_in, self.mu_out = mu_in, mu_out
-        self.cx, self.cy       = center
-        self.r0                = radius
-        self.steep             = steep
+                 r1=0.15,
+                 r2=0.30,
+                 bc_tol=1e-3):
+        self.eps1,self.eps2,self.eps3 = eps
+        self.k1,  self.k2,  self.k3   = k
+        self.cx,  self.cy            = center
+        self.r1,  self.r2            = r1, r2
+        self.bc_tol                  = bc_tol
 
     def graph_modify(self, graph):
         """
-        Append permeability mu as a node feature.
-        graph.pos: [N,2]
-        We build mu = mu_out + (mu_in-mu_out) * sigmoid((r0 - r)*steep)
+        Build node features [x, y, eps(x), k(x)].
         """
         x = graph.pos[:,0:1]
         y = graph.pos[:,1:2]
-        # compute distance to center
-        r = torch.sqrt((x-self.cx)**2 + (y-self.cy)**2 + 1e-6)
-        h = torch.sigmoid((self.r0 - r)*self.steep)  # approx Heaviside(r<r0)
-        mu = self.mu_out + (self.mu_in-self.mu_out)*h    # [N,1]
-        graph.x = torch.cat([x, y, mu], dim=-1)  # [N,3]
+        dx = x - self.cx
+        dy = y - self.cy
+        r  = torch.sqrt(dx*dx + dy*dy)
+
+        eps = torch.where(r <= self.r1,
+                          self.eps1,
+                   torch.where(r <= self.r2,
+                               self.eps2,
+                               self.eps3))
+        k   = torch.where(r <= self.r1,
+                          self.k1,
+                   torch.where(r <= self.r2,
+                               self.k2,
+                               self.k3))
+
+        graph.x = torch.cat([x, y, eps, k], dim=-1)   # all are [N,1]
         return graph
 
-    def _ansatz_Hz(self, graph, Hz_raw):
+    def _ansatz_u(self, graph, u_raw):
         """
-        Hard‐enforce Hz=1 on x=0 and x=1 faces via:
-         Hz = G + D*Hz_raw,
-        where G≡1, D(x)=tanh(pi*x)*tanh(pi*(1-x))
+        Hard Dirichlet on x=0 (“incoming plane wave” u=cos(k3 x))
+        G(x)=cos(k3 x), D(x)=tanh(pi x) so that u(0)=G(0)=1.
         """
         x = graph.pos[:,0:1]
-        D = torch.tanh(torch.pi*x)*torch.tanh(torch.pi*(1.0-x))
-        G = torch.ones_like(x)  # Hz=1 on left/right
-        return G + D*Hz_raw
+        G = torch.cos(self.k3 * x)
+        D = torch.tanh(math.pi * x)
+        return G + D * u_raw
 
-    def pde_residual(self, graph, Hz):
+    def pde_residual(self, graph, u):
         """
-        Build residual r = -div( mu * grad Hz )
-        graph.x = [x,y,mu]
-        Hz: [N,1]
-        returns r: [N,1]
+        Computes (div(eps * grad u) + k^2 u) at every node.
+        Returns
+          r_pde  [N,1],  grad_u [N,2]
         """
         pos = graph.pos
-        mu  = graph.x[:,2:3]    # [N,1]
+        eps = graph.x[:,2:3]
+        k   = graph.x[:,3:4]
 
-        # 1) fac ∂Hz/∂pos  → grad_Hz: [N,2]
-        grad_Hz = torch.autograd.grad(
-            Hz, pos,
-            grad_outputs=torch.ones_like(Hz),
-            create_graph=True,   # <— no graph!
-        )[0]
+        # ∇u
+        grad_u = torch.autograd.grad(
+            outputs=u,
+            inputs=pos,
+            grad_outputs=torch.ones_like(u),
+            create_graph=True,
+        )[0]                                         # [N,2]
 
-        # 2) flux = mu * grad_Hz         [N,2]
-        flux = mu * grad_Hz
+        # flux = eps * ∇u
+        flux = eps * grad_u                          # [N,2]
 
-        # 3) divergence: ∑_i ∂flux_i/∂pos_i
-        div = 0
+        # div flux
+        div = torch.zeros_like(u)
         for i in range(2):
-            div_i = torch.autograd.grad(
-                flux[:,i:i+1], pos,
+            di = torch.autograd.grad(
+                outputs=flux[:,i:i+1],
+                inputs=pos,
                 grad_outputs=torch.ones_like(flux[:,i:i+1]),
-                create_graph=True,   
+                create_graph=True,
             )[0][:,i:i+1]
-            div = div + div_i
+            div = div + di
 
-        # PDE: -div = 0
-        return -div
+        # PDE residual = div(eps grad u) + k^2 u   (f=0)
+        r_pde = div + (k**2)*u
+        return r_pde, grad_u
+
+    
+    
+
+    
         
 
     
