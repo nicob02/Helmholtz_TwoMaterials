@@ -121,7 +121,6 @@ def modelTester(config):
     raw     = model(graph)                           # [N,1]
     u_hat   = physics._ansatz_u(graph, raw)          # enforce Dirichlet @ x=0
     return u_hat.cpu().numpy()      # shape [N,1]
-
 def compute_steady_error(u_pred, u_exact, config):
     # 1) Convert predictions to NumPy
     if isinstance(u_pred, torch.Tensor):
@@ -146,33 +145,43 @@ def compute_steady_error(u_pred, u_exact, config):
 
     return rel_l2
 
-def render_results(u_pred, u_exact, graph, filename="steady_results.png"):
+def render_results(u_pred, u_exact, graph, filename="NNvsFEM.png"):
     """
-    Scatter‐plot Exact, Predicted, and Absolute Error on the mesh nodes.
+    Scatter-plot Exact, Predicted, and Absolute Error on the mesh nodes.
     """
+    # pull out XY
     pos = graph.pos.cpu().numpy()
     x, y = pos[:,0], pos[:,1]
-    error = np.abs(u_exact - u_pred)
 
+    # ensure both are flat 1-D arrays of length N
+    u_pred_flat  = np.array(u_pred).reshape(-1)
+    u_exact_flat = np.array(u_exact).reshape(-1)
+    assert u_pred_flat.shape == u_exact_flat.shape, "pred/exact length mismatch"
+
+    # now compute error
+    error = np.abs(u_exact_flat - u_pred_flat)
+
+    # set up panels
     fig, axes = plt.subplots(1, 3, figsize=(18,5))
 
     # 1) Exact
-    sc0 = axes[0].scatter(x, y, c=u_exact.flatten(), cmap='viridis', s=5)
+    sc0 = axes[0].scatter(x, y, c=u_exact_flat, cmap='viridis', s=5)
     axes[0].set_title("Exact Solution")
     plt.colorbar(sc0, ax=axes[0], shrink=0.7)
 
     # 2) Predicted
-    sc1 = axes[1].scatter(x, y, c=u_pred.flatten(), cmap='viridis', s=5)
+    sc1 = axes[1].scatter(x, y, c=u_pred_flat, cmap='viridis', s=5)
     axes[1].set_title("GNN Prediction")
     plt.colorbar(sc1, ax=axes[1], shrink=0.7)
 
     # 3) Absolute Error
-    sc2 = axes[2].scatter(x, y, c=error.flatten(), cmap='magma', s=5)
+    sc2 = axes[2].scatter(x, y, c=error, cmap='magma', s=5)
     axes[2].set_title("Absolute Error")
     plt.colorbar(sc2, ax=axes[2], shrink=0.7)
 
     for ax in axes:
-        ax.set_xlabel("x"); ax.set_ylabel("y")
+        ax.set_xlabel("x")
+        ax.set_ylabel("y")
 
     plt.tight_layout()
     plt.savefig(filename, dpi=300)
