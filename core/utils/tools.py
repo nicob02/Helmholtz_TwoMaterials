@@ -76,8 +76,8 @@ def modelTrainer(config):
     
     for epoch in range(1, config.epchoes + 1):  # Creates different ic and solves the problem, does this epoch # of times
         
-        raw     = model(graph)                           # [N,1]
-        u_hat   = physics._ansatz_u(graph, raw)          # enforce Dirichlet @ x=0
+        u_hat     = model(graph)                           # [N,1]
+        #u_hat   = physics._ansatz_u(graph, raw)          # enforce Dirichlet @ x=0
         r_pde, grad_u = physics.pde_residual(graph, u_hat)
 
         # PDE loss
@@ -123,8 +123,8 @@ def modelTester(config):
     physics = config.func_main
     
     graph = physics.graph_modify(graph)
-    raw     = model(graph)                           # [N,1]
-    u_hat   = physics._ansatz_u(graph, raw)          # enforce Dirichlet @ x=0
+    u_hat     = model(graph)                           # [N,1]
+   # u_hat   = physics._ansatz_u(graph, raw)          # enforce Dirichlet @ x=0
     return u_hat.cpu().numpy()      # shape [N,1]
 def compute_steady_error(u_pred, u_exact, config):
     # 1) Convert predictions to NumPy
