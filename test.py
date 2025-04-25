@@ -3,7 +3,7 @@ from core.utils.tools import parse_config, modelTester, RemoveDir
 from core.utils.tools import compute_steady_error, render_results
 from core.models import msgPassing
 import os
-from functions import MagneticFunc as Func
+from functions import ElectroThermalFunc as Func
 import matplotlib.pyplot as plt
 from core.geometry import ElectrodeMesh
 out_ndim = 1
