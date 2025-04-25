@@ -97,6 +97,10 @@ def modelTrainer(config):
         jump2 = (eps2-eps3)*(gj * n2).sum(dim=1)
         loss_if2 = torch.mean(jump2**2) if if2.any() else 0.0
 
+        print("if_loss")
+        print(loss_if1 + loss_if2)
+        print("pde_loss")
+        print(loss_pde)
         loss = ( loss_pde + config.lambda_if  * (loss_if1 + loss_if2))
         
         config.optimizer.zero_grad()
