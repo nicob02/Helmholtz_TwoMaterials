@@ -1,3 +1,4 @@
+from NM import run_fem 
 import torch
 from core.utils.tools import parse_config, modelTester, RemoveDir
 from core.utils.tools import compute_steady_error, render_results
