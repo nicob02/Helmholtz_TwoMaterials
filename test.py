@@ -12,8 +12,13 @@ dens=65
 ckptpath = 'checkpoint/simulator_%s.pth' % Func.func_name    #FIGURE THIS OUT
 device = torch.device(0)
 
-func_main = Func(mu_in=3.0, mu_out=1.0,
-                    center=(0.5,0.5), radius=0.2, steep=500.0)
+func_main = Func(eps=(4.0,2.0,1.0),
+    k  =(20.0,10.0, 5.0),
+    center=(0.5,0.5),
+    r1=0.15,
+    r2=0.30,
+    bc_tol=1e-3
+)
 
 mesh = ElectrodeMesh(ru=(1, 1), lb=(0, 0), density=65)
 graph = mesh.getGraphData()
@@ -41,19 +46,38 @@ setattr(test_config, 'func_main', func_main)
 #-----------------------------------------
 
 print('************* model test starts! ***********************')
-H_z = modelTester(test_config)
-
+predicted_results = modelTester(test_config)
 pos_np = graph.pos.cpu().numpy()
 x, y   = pos_np[:,0], pos_np[:,1]
 
-fig, axes = plt.subplots(1, 2, figsize=(12,5), tight_layout=True)
+coords_fem, V_vals_fem = run_fem(electrode_mesh=mesh, coords=graph.pos.cpu().numpy()) 
 
+# 3) Compute and print relative L2 errors
+err_V = compute_steady_error(predicted_results, V_vals_fem, test_config)
+print(f"Rel L2 error Voltage:     {err_V:.3e}")
+
+render_results(predicted_results, V_vals_fem, graph, filename="NNvsFEM.png")
+
+
+
+fig, axes = plt.subplots(1, 2, figsize=(12,5), tight_layout=True)
 # Hz
-sc0 = axes[0].scatter(x, y, c=H_z.flatten(), cmap='viridis', s=5)
-axes[0].set_title("Predicted H_z")
+sc0 = axes[0].scatter(x, y, c=predicted_results.flatten(), cmap='viridis', s=5)
+axes[0].set_title("Predicted Voltage Distribution")
 axes[0].set_xlabel("x"); axes[0].set_ylabel("y")
 plt.colorbar(sc0, ax=axes[0], shrink=0.7)
 
-plt.savefig("H_z.png", dpi=300)
+plt.savefig("Helmholz_Heterogenous.png", dpi=300)
 plt.close(fig)
-print("Done — predictions plotted to H_z.png")
+print("Done — predictions plotted to Helmholz_Heterogenous.png")
+
+"""
+u_exact = func_main.exact_solution(graph)  
+u_exact_np  = u_exact.detach().cpu().numpy()
+# 2) Compute exact & error
+rel_l2 = compute_steady_error(predicted_results, u_exact_np, test_config)
+print(f"Relative L2 error: {rel_l2:.3e}")
+
+# 3) Render the three‐panel result
+render_results(predicted_results, u_exact_np, graph, filename="helmholtz_steady.png")
+"""
