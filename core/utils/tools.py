@@ -101,7 +101,8 @@ def modelTrainer(config):
         print(loss_if1 + loss_if2)
         print("pde_loss")
         print(loss_pde)
-        loss = ( loss_pde + config.lambda_if  * (loss_if1 + loss_if2))
+        loss = loss_pde
+        #loss = ( loss_pde + config.lambda_if  * (loss_if1 + loss_if2))
         
         config.optimizer.zero_grad()
         loss.backward(retain_graph=True)
