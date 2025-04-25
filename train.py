@@ -3,7 +3,7 @@ from core.models import msgPassing
 from core.geometry import ElectrodeMesh
 from torch.utils.tensorboard import SummaryWriter
 from core.utils.tools import parse_config, modelTrainer
-from functions import MagneticFunc as Func
+from functions import ElectroThermalFunc as Func
 import matplotlib.pyplot as plt
 
 device = torch.device(0)
