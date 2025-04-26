@@ -125,6 +125,7 @@ def modelTrainer(config):
         )
 
         loss_if = loss_if1 + loss_if2
+        
 """
         # 3) left‐boundary Dirichlet loss
         #    u_hat[left] should be zero
@@ -136,8 +137,8 @@ def modelTrainer(config):
         # PDE grad‐norm
         grads_pde = torch.autograd.grad(
             loss_pde, params,
-            retain_graph=True, create_graph=True
-        )
+            retain_graph=True, create_graph=True)
+        
         G_pde = torch.sqrt(sum(torch.sum(g**2) for g in grads_pde))
 
         # interface grad‐norm (allow_unused in case loss_if==0)
