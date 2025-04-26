@@ -18,7 +18,7 @@ func_main = Func(eps=(4.0,2.0,1.0),
     center=(0.5,0.5),
     r1=0.15,
     r2=0.30,
-    bc_tol=1e-3
+    bc_tol=1e-2
 )
 
 mesh = ElectrodeMesh(ru=(1, 1), lb=(0, 0), density=65)
