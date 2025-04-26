@@ -13,12 +13,14 @@ dens=65
 ckptpath = 'checkpoint/simulator_%s.pth' % Func.func_name    #FIGURE THIS OUT
 device = torch.device(0)
 
-func_main = Func(eps=(4.0,2.0,1.0),
-    k  =(20.0,10.0, 5.0),
-    center=(0.5,0.5),
-    r1=0.15,
-    r2=0.30,
-    bc_tol=1e-2
+func_main = Func(
+    eps_inner = 4.0,     # ε inside radius r1
+    eps_outer = 1.0,     # ε outside
+    k_inner   = 20.0,    # k inside
+    k_outer   = 5.0,     # k outside
+    center    = (0.5, 0.5),
+    r1        = 0.30,    # interface radius
+    bc_tol    = 1e-2     # boundary tolerance
 )
 
 mesh = ElectrodeMesh(ru=(1, 1), lb=(0, 0), density=65)
@@ -57,7 +59,7 @@ coords_fem, V_vals_fem = run_fem(electrode_mesh=mesh, coords=graph.pos.cpu().num
 err_V = compute_steady_error(predicted_results, V_vals_fem, test_config)
 print(f"Rel L2 error Voltage:     {err_V:.3e}")
 
-render_results(predicted_results, V_vals_fem, graph, filename="Left_Boundary.png")
+render_results(predicted_results, V_vals_fem, graph, filename="1_interface.png")
 
 
 
