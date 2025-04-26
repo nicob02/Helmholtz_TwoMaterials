@@ -163,8 +163,8 @@ def modelTrainer(config):
         if epoch % 100 == 0:
             print(f"[Epoch {epoch:4d}] "
                   f"PDE={loss_pde.item():.3e}, "
-                  f"IF={loss_if.item():.3e} (λ_if={lambda_if:.1e}), "
-                  f"BC={loss_bc.item():.3e} (λ_bc={lambda_bc:.1e})")
+                  f"IF={loss_if.item():.3e} (λ_if={lambda_if:.1e}), ")
+              
 
         L_total.backward(retain_graph=True)
         optimizer.step()
