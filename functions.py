@@ -50,9 +50,12 @@ class ElectroThermalFunc():
         Hard Dirichlet on x=0 (“incoming plane wave” u=cos(k3 x))
         G(x)=cos(k3 x), D(x)=tanh(pi x) so that u(0)=G(0)=1.
         """
-        x = graph.pos[:,0:1]
-        G = torch.cos(self.k3 * x)
-        D = torch.tanh(math.pi * x)
+        x = graph.pos[:, 0:1]
+        # detach so no grad‐graph is built back through 'x'
+        G = torch.cos(self.k3 * x).detach()  
+        D = torch.tanh(math.pi * x).detach()
+    
+        # Only the multiplication by u_raw remains in the graph.
         return G + D * u_raw
 
     def pde_residual(self, graph, u):
