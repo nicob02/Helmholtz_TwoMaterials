@@ -95,7 +95,7 @@ def modelTrainer(config):
         optimizer.zero_grad()
 
         # --- forward PDE + BC/interface losses ---
-        u_hat     = model(graph)                           # [N,1]
+        raw     = model(graph)                           # [N,1]
         u_hat   = physics._ansatz_u(graph, raw) 
         r_pde, grad_u = physics.pde_residual(graph, u_hat)
 
