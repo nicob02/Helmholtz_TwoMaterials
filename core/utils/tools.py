@@ -58,13 +58,16 @@ def modelTrainer(config):
     graph = config.graph.to(device)
     graph = physics.graph_modify(graph)
 
-    # 2) masks: left‐BC & single interface
+    # 2) masks: left‐BC, top/bottom for Neumann, & single interface
     x = graph.pos[:, 0:1]
+    y = graph.pos[:, 1:2]
     dx = x - physics.cx
-    dy = graph.pos[:, 1:2] - physics.cy
+    dy = y - physics.cy
     r  = torch.sqrt(dx*dx + dy*dy)
 
-    left = torch.isclose(x, torch.zeros_like(x), atol=tol).squeeze()
+    left      = torch.isclose(x, torch.zeros_like(x), atol=tol).squeeze()
+    bottom    = torch.isclose(y, torch.zeros_like(y), atol=tol).squeeze()
+    top       = torch.isclose(y, torch.ones_like(y),  atol=tol).squeeze()
     interface = ((r > physics.r1 - tol) & (r < physics.r1 + tol)).squeeze()
 
     # precompute normal on interface
@@ -73,10 +76,10 @@ def modelTrainer(config):
         [dx[interface]/r[interface], dy[interface]/r[interface]], dim=1
     )
 
-    # print counts
-    n_left = int(left.sum().item())
-    n_ifc  = int(interface.sum().item())
-    print(f"Sanity: left‐BC={n_left} nodes, interface={n_ifc} nodes")
+    # sanity counts
+    print(f"Sanity: left‐BC={int(left.sum())}, "
+          f"bottom‐BC={int(bottom.sum())}, top‐BC={int(top.sum())}, "
+          f"interface={int(interface.sum())} nodes")
 
     # 3) get trainable params
     params = [p for p in model.parameters() if p.requires_grad]
@@ -86,53 +89,77 @@ def modelTrainer(config):
         optimizer.zero_grad()
 
         # a) forward + PDE
-        raw   = model(graph)                  # [N,1]
-        u_hat = physics._ansatz_u(graph, raw)
+        raw    = model(graph)                    # [N,1]
+        u_hat  = physics._ansatz_u(graph, raw)
         r_pde, grad_u = physics.pde_residual(graph, u_hat)
         loss_pde = torch.mean(r_pde**2)
 
         # b) interface‐jump
         eps_in, eps_out = physics.eps_inner, physics.eps_outer
-        gi = grad_u[interface]
-        n  = normals[interface]
-        jump = (eps_in - eps_out) * (gi * n).sum(dim=1)
+        gi    = grad_u[interface]
+        n     = normals[interface]
+        jump  = (eps_in - eps_out) * (gi * n).sum(dim=1)
         loss_if = torch.mean(jump**2) if interface.any() else torch.tensor(0.0, device=device)
 
         # c) left‐Dirichlet
-        loss_bc = torch.mean((u_hat[left])**2) if left.any() else torch.tensor(0.0, device=device)
+        loss_bc = torch.mean(u_hat[left]**2) if left.any() else torch.tensor(0.0, device=device)
 
-        # d) NTK weights
+        # d) top/bottom Neumann: ∂u/∂n = 0 → here simply ∂u/∂y = 0
+        #    grad_u[:,1] is ∂u/∂y
+        dy_vals     = grad_u[:, 1]
+        top_vals    = dy_vals[top]
+        bottom_vals = dy_vals[bottom]
+        loss_neu_top    = torch.mean(top_vals**2)    if top.any()    else torch.tensor(0.0, device=device)
+        loss_neu_bottom = torch.mean(bottom_vals**2) if bottom.any() else torch.tensor(0.0, device=device)
+        loss_neu = loss_neu_top + loss_neu_bottom
+
+        # e) compute NTK‐style weights for all four
+        eps = 1e-8
+        # PDE grad‐norm
         grads_pde = torch.autograd.grad(loss_pde, params, retain_graph=True, create_graph=True)
         G_pde = torch.sqrt(sum(torch.sum(g**2) for g in grads_pde))
 
+        # interface grad‐norm
         grads_if = torch.autograd.grad(loss_if, params, retain_graph=True, create_graph=True, allow_unused=True)
         grads_if = [g if g is not None else torch.zeros_like(p) for g,p in zip(grads_if, params)]
         G_if = torch.sqrt(sum(torch.sum(g**2) for g in grads_if))
 
+        # Dirichlet grad‐norm
         grads_bc = torch.autograd.grad(loss_bc, params, retain_graph=True, create_graph=True, allow_unused=True)
         grads_bc = [g if g is not None else torch.zeros_like(p) for g,p in zip(grads_bc, params)]
         G_bc = torch.sqrt(sum(torch.sum(g**2) for g in grads_bc))
 
-        eps = 1e-8
-        λ_if =   (loss_if  / (loss_pde + eps)) * (G_if / (G_pde + eps))
-        λ_bc =   (loss_bc  / (loss_pde + eps)) * (G_bc / (G_pde + eps))
+        # Neumann grad‐norm
+        grads_neu = torch.autograd.grad(loss_neu, params, retain_graph=True, create_graph=True, allow_unused=True)
+        grads_neu = [g if g is not None else torch.zeros_like(p) for g,p in zip(grads_neu, params)]
+        G_neu = torch.sqrt(sum(torch.sum(g**2) for g in grads_neu))
 
-        # clamp & detach
-        λ_if = λ_if.clamp(1e-3,1e3).detach()
-        λ_bc = λ_bc.clamp(1e-3,1e3).detach()
-        
+        # NTK weights
+        λ_if  = (loss_if  / (loss_pde + eps)) * (G_if  / (G_pde + eps))
+        λ_bc  = (loss_bc  / (loss_pde + eps)) * (G_bc  / (G_pde + eps))
+        λ_neu = (loss_neu / (loss_pde + eps)) * (G_neu / (G_pde + eps))
 
-        # e) total loss
-        L = loss_pde + λ_if*loss_if
-       # L = loss_pde + λ_if*loss_if + λ_bc*loss_bc
+        # clamp & detach so they don’t propagate gradients
+        λ_if  = λ_if.clamp(1e-3,1e3).detach()
+        λ_bc  = λ_bc.clamp(1e-3,1e3).detach()
+        λ_neu = λ_neu.clamp(1e-3,1e3).detach()
+
+        # f) total loss
+        L = loss_pde + λ_if  * loss_if  + λ_neu * loss_neu
+        #L = loss_pde + λ_if  * loss_if  + λ_bc  * loss_bc  + λ_neu * loss_neu
 
         if epoch % 100 == 0:
-            print(f"[{epoch:4d}] PDE={loss_pde:.3e}  IF={loss_if:.3e}(λ={λ_if:.1e})  BC={loss_bc:.3e}(λ={λ_bc:.1e})")
+            print(f"[{epoch:4d}] PDE={loss_pde:.3e}  "
+                  f"IF={loss_if:.3e}(λ={λ_if:.1e})  "
+                  f"BC={loss_bc:.3e}(λ={λ_bc:.1e})  "
+                  f"NEU={loss_neu:.3e}(λ={λ_neu:.1e})")
 
+        # g) backward & step
         L.backward(retain_graph=True)
         optimizer.step()
         scheduler.step()
 
+    # save & finish
     model.save_model(optimizer)
     print("Done. Final loss:", L.item())
 
