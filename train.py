@@ -18,7 +18,7 @@ func_main = Func(
     k_outer   = 5.0,     # k outside
     center    = (0.5, 0.5),
     r1        = 0.30,    # interface radius
-    bc_tol    = 5e-3     # boundary tolerance
+    bc_tol    = 1e-2     # boundary tolerance
 )
 
 model = msgPassing(message_passing_num=3, node_input_size=out_ndim+3, edge_input_size=3, 
