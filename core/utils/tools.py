@@ -44,10 +44,6 @@ def parse_config(file='config.json'):
     return configs[k]
 
 
-
-   import torch
-
-
 def modelTrainer(config):
     
     model     = config.model
