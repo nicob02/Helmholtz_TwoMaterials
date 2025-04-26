@@ -136,7 +136,7 @@ def modelTrainer(config):
         # interface grad‐norm (allow_unused in case loss_if==0)
         grads_if = torch.autograd.grad(
             loss_if, params,
-            retain_graph=True, create_graph=True,
+            retain_graph=False, create_graph=True,
             allow_unused=True
         )
         # replace None→zeros so we can do the norm
@@ -149,7 +149,7 @@ def modelTrainer(config):
         # bc grad‐norm
         grads_bc = torch.autograd.grad(
             loss_bc, params,
-            retain_graph=True, create_graph=True,
+            retain_graph=False, create_graph=True,
             allow_unused=True
         )
         grads_bc = [
