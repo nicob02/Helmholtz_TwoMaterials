@@ -126,13 +126,8 @@ def modelTrainer(config):
 
         loss_if = loss_if1 + loss_if2
         
-"""
-        # 3) left‐boundary Dirichlet loss
-        #    u_hat[left] should be zero
-        loss_bc = torch.mean(u_hat[left]**2) \
-                  if left.any() \
-                  else torch.tensor(0.0, device=device)
-"""
+         else torch.tensor(0.0, device=device)
+
         # --- 4) compute gradient‐norms via torch.autograd.grad ---
         # PDE grad‐norm
         grads_pde = torch.autograd.grad(
@@ -153,19 +148,7 @@ def modelTrainer(config):
             for g, p in zip(grads_if, params)
         ]
         G_if = torch.sqrt(sum(torch.sum(g**2) for g in grads_if))
-"""
-        # bc grad‐norm
-        grads_bc = torch.autograd.grad(
-            loss_bc, params,
-            retain_graph=True, create_graph=True,
-            allow_unused=True
-        )
-        grads_bc = [
-            g if g is not None else torch.zeros_like(p)
-            for g, p in zip(grads_bc, params)
-        ]
-        G_bc = torch.sqrt(sum(torch.sum(g**2) for g in grads_bc))
-"""
+
         # --- 5) form NTK‐style weights ---
         eps = 1e-8
         lambda_if = (loss_if  / (loss_pde + eps)) * (G_if  / (G_pde + eps))
