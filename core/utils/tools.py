@@ -125,9 +125,7 @@ def modelTrainer(config):
         )
 
         loss_if = loss_if1 + loss_if2
-        
-         else torch.tensor(0.0, device=device)
-
+    
         # --- 4) compute gradient‐norms via torch.autograd.grad ---
         # PDE grad‐norm
         grads_pde = torch.autograd.grad(
