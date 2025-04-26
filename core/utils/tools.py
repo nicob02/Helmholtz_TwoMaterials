@@ -43,6 +43,10 @@ def parse_config(file='config.json'):
             configs[k] = config
     return configs[k]
 
+
+
+   import torch
+
 def modelTrainer(config):
     model     = config.model
     optimizer = config.optimizer
@@ -123,20 +127,17 @@ def modelTrainer(config):
                   else torch.tensor(0.0, device=device)
 
         # --- 4) compute gradient‐norms via torch.autograd.grad ---
-
-        # PDE grad-norm (no second-order graph needed)
+        # PDE grad‐norm
         grads_pde = torch.autograd.grad(
             loss_pde, params,
-            retain_graph=True,        # keep the graph alive for the final backward
-            create_graph=False        # <—— no need for a second-order graph
+            retain_graph=True, create_graph=True
         )
         G_pde = torch.sqrt(sum(torch.sum(g**2) for g in grads_pde))
-        
-        # interface grad-norm
+
+        # interface grad‐norm (allow_unused in case loss_if==0)
         grads_if = torch.autograd.grad(
             loss_if, params,
-            retain_graph=True,        # keep the graph alive for the final backward
-            create_graph=False,       # <—— no second-order graph
+            retain_graph=True, create_graph=True,
             allow_unused=True
         )
         # replace None→zeros so we can do the norm
@@ -146,7 +147,12 @@ def modelTrainer(config):
         ]
         G_if = torch.sqrt(sum(torch.sum(g**2) for g in grads_if))
 
-        grads_bc = torch.autograd.grad(loss_bc, params, retain_graph=True, create_graph=False, allow_unused=True)
+        # bc grad‐norm
+        grads_bc = torch.autograd.grad(
+            loss_bc, params,
+            retain_graph=True, create_graph=True,
+            allow_unused=True
+        )
         grads_bc = [
             g if g is not None else torch.zeros_like(p)
             for g, p in zip(grads_bc, params)
@@ -173,12 +179,13 @@ def modelTrainer(config):
                   f"IF={loss_if.item():.3e} (λ_if={lambda_if:.1e}), "
                   f"BC={loss_bc.item():.3e} (λ_bc={lambda_bc:.1e})")
 
-        L_total.backward()
+        L_total.backward(retain_graph=True)
         optimizer.step()
         scheduler.step()
 
     model.save_model(optimizer)
     print("Training completed!  Final loss:", L_total.item())
+
 
 @torch.no_grad()
 def modelTester(config):
