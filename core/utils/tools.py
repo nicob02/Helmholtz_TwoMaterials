@@ -87,7 +87,8 @@ def modelTrainer(config):
         optimizer.zero_grad()
 
         # --- forward PDE + BC/interface losses ---
-        u_hat      = model(graph)                       # [N,1]
+        raw     = model(graph)                           # [N,1]
+        u_hat   = physics._ansatz_u(graph, raw) 
         r_pde, grad_u = physics.pde_residual(graph, u_hat)
 
         # 1) PDE loss
@@ -192,8 +193,8 @@ def modelTester(config):
     physics = config.func_main
     
     graph = physics.graph_modify(graph)
-    u_hat     = model(graph)                           # [N,1]
-   # u_hat   = physics._ansatz_u(graph, raw)          # enforce Dirichlet @ x=0
+    raw     = model(graph)                           # [N,1]
+    u_hat   = physics._ansatz_u(graph, raw)          # enforce Dirichlet @ x=0
     return u_hat.cpu().numpy()      # shape [N,1]
 def compute_steady_error(u_pred, u_exact, config):
     # 1) Convert predictions to NumPy
