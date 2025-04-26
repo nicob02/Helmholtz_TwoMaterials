@@ -45,132 +45,96 @@ def parse_config(file='config.json'):
 
 
 def modelTrainer(config):
-    
     model     = config.model
     optimizer = config.optimizer
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer,
-                                                step_size=config.lrstep,
-                                                gamma=0.99)
+    scheduler = torch.optim.lr_scheduler.StepLR(
+        optimizer, step_size=config.lrstep, gamma=0.99
+    )
     physics   = config.func_main
     tol       = physics.bc_tol
+    device    = next(model.parameters()).device
 
-    # put everything on the right device
-    device = next(model.parameters()).device
-    graph  = config.graph.to(device)
-
-    # --- 1) build static features once ---
+    # 1) load and send graph to device
+    graph = config.graph.to(device)
     graph = physics.graph_modify(graph)
 
-    # --- 2) precompute masks & normals ---
+    # 2) masks: left‐BC & single interface
     x = graph.pos[:, 0:1]
-    y = graph.pos[:, 1:2]
-
-    # left‐boundary mask only (you can add right/top/bottom similarly)
-    left = torch.isclose(x, torch.zeros_like(x), atol=tol).squeeze()
-
-    # interface masks + normals
     dx = x - physics.cx
-    dy = y - physics.cy
+    dy = graph.pos[:, 1:2] - physics.cy
     r  = torch.sqrt(dx*dx + dy*dy)
-    if1 = ((r > physics.r1 - tol) & (r < physics.r1 + tol)).squeeze()
-    if2 = ((r > physics.r2 - tol) & (r < physics.r2 + tol)).squeeze()
 
-    rad_normals = torch.zeros_like(graph.pos)
-    rad_normals[if1] = torch.cat([dx[if1]/r[if1], dy[if1]/r[if1]], dim=1)
-    rad_normals[if2] = torch.cat([dx[if2]/r[if2], dy[if2]/r[if2]], dim=1)
+    left = torch.isclose(x, torch.zeros_like(x), atol=tol).squeeze()
+    interface = ((r > physics.r1 - tol) & (r < physics.r1 + tol)).squeeze()
 
-    # grab list of trainable params once
-    params = [p for p in model.parameters() if p.requires_grad]
-    
-    # ---- SANITY CHECK COUNTS ----
+    # precompute normal on interface
+    normals = torch.zeros_like(graph.pos)
+    normals[interface] = torch.cat(
+        [dx[interface]/r[interface], dy[interface]/r[interface]], dim=1
+    )
+
+    # print counts
     n_left = int(left.sum().item())
-    n_if1  = int(if1.sum().item())
-    n_if2  = int(if2.sum().item())
-    print(f"Sanity check: # left‐BC nodes = {n_left}, "
-          f"# inner‐interface nodes = {n_if1}, "
-          f"# outer‐interface nodes = {n_if2}")
-    
-    for epoch in range(1, config.epchoes + 1):
+    n_ifc  = int(interface.sum().item())
+    print(f"Sanity: left‐BC={n_left} nodes, interface={n_ifc} nodes")
 
+    # 3) get trainable params
+    params = [p for p in model.parameters() if p.requires_grad]
+
+    # 4) training loop
+    for epoch in range(1, config.epchoes+1):
         optimizer.zero_grad()
 
-        # --- forward PDE + BC/interface losses ---
-        raw     = model(graph)                           # [N,1]
-        u_hat   = physics._ansatz_u(graph, raw) 
+        # a) forward + PDE
+        raw   = model(graph)                  # [N,1]
+        u_hat = physics._ansatz_u(graph, raw)
         r_pde, grad_u = physics.pde_residual(graph, u_hat)
-
-        # 1) PDE loss
         loss_pde = torch.mean(r_pde**2)
 
-        # 2) interface‐flux jump loss (both circles)
-        eps1, eps2, eps3 = physics.eps1, physics.eps2, physics.eps3
+        # b) interface‐jump
+        eps_in, eps_out = physics.eps_inner, physics.eps_outer
+        gi = grad_u[interface]
+        n  = normals[interface]
+        jump = (eps_in - eps_out) * (gi * n).sum(dim=1)
+        loss_if = torch.mean(jump**2) if interface.any() else torch.tensor(0.0, device=device)
 
-        # inner jump
-        gi    = grad_u[if1]
-        n1    = rad_normals[if1]
-        jump1 = (eps1 - eps2) * (gi * n1).sum(dim=1)
-        loss_if1 = (
-            torch.mean(jump1**2)
-            if if1.any()
-            else torch.tensor(0.0, device=device)
-        )
+        # c) left‐Dirichlet
+        loss_bc = torch.mean((u_hat[left])**2) if left.any() else torch.tensor(0.0, device=device)
 
-        # outer jump
-        gj    = grad_u[if2]
-        n2    = rad_normals[if2]
-        jump2 = (eps2 - eps3) * (gj * n2).sum(dim=1)
-        loss_if2 = (
-            torch.mean(jump2**2)
-            if if2.any()
-            else torch.tensor(0.0, device=device)
-        )
-
-        loss_if = loss_if1 + loss_if2
-
-        # --- 4) compute gradient‐norms via torch.autograd.grad ---
-        # PDE grad‐norm
-        grads_pde = torch.autograd.grad(
-            loss_pde, params,
-            retain_graph=True, create_graph=True
-        )
+        # d) NTK weights
+        grads_pde = torch.autograd.grad(loss_pde, params, retain_graph=True, create_graph=True)
         G_pde = torch.sqrt(sum(torch.sum(g**2) for g in grads_pde))
 
-        # interface grad‐norm (allow_unused in case loss_if==0)
-        grads_if = torch.autograd.grad(
-            loss_if, params,
-            retain_graph=True, create_graph=True,
-            allow_unused=True
-        )
-        # replace None→zeros so we can do the norm
-        grads_if = [
-            g if g is not None else torch.zeros_like(p)
-            for g, p in zip(grads_if, params)
-        ]
+        grads_if = torch.autograd.grad(loss_if, params, retain_graph=True, create_graph=True, allow_unused=True)
+        grads_if = [g if g is not None else torch.zeros_like(p) for g,p in zip(grads_if, params)]
         G_if = torch.sqrt(sum(torch.sum(g**2) for g in grads_if))
 
-      
-        # --- 5) form NTK‐style weights ---
+        grads_bc = torch.autograd.grad(loss_bc, params, retain_graph=True, create_graph=True, allow_unused=True)
+        grads_bc = [g if g is not None else torch.zeros_like(p) for g,p in zip(grads_bc, params)]
+        G_bc = torch.sqrt(sum(torch.sum(g**2) for g in grads_bc))
+
         eps = 1e-8
-        lambda_if = (loss_if  / (loss_pde + eps)) * (G_if  / (G_pde + eps))
+        λ_if =   (loss_if  / (loss_pde + eps)) * (G_if / (G_pde + eps))
+        λ_bc =   (loss_bc  / (loss_pde + eps)) * (G_bc / (G_pde + eps))
 
-        # clamp for stability & detach so they aren’t treated as learnable
-        lambda_if = lambda_if.clamp(1e-3, 1e3).detach()
+        # clamp & detach
+        λ_if = λ_if.clamp(1e-3,1e3).detach()
+        λ_bc = λ_bc.clamp(1e-3,1e3).detach()
+        
 
-        # --- 6) total loss & backward ---
-        L_total = loss_pde + lambda_if * loss_if 
-
+        # e) total loss
+        L = loss_pde + λ_if*loss_if
+       # L = loss_pde + λ_if*loss_if + λ_bc*loss_bc
 
         if epoch % 100 == 0:
-            print(f"[Epoch {epoch:4d}] "
-                  f"PDE={loss_pde.item():.3e}, "
-                  f"IF={loss_if.item():.3e} (λ_if={lambda_if:.1e}), ")
+            print(f"[{epoch:4d}] PDE={loss_pde:.3e}  IF={loss_if:.3e}(λ={λ_if:.1e})  BC={loss_bc:.3e}(λ={λ_bc:.1e})")
 
-        L_total.backward(retain_graph=True)
+        L.backward(retain_graph=True)
         optimizer.step()
         scheduler.step()
 
     model.save_model(optimizer)
-    print("Training completed!  Final loss:", L_total.item())
+    print("Done. Final loss:", L.item())
 
 
 @torch.no_grad()
