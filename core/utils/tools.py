@@ -123,17 +123,20 @@ def modelTrainer(config):
                   else torch.tensor(0.0, device=device)
 
         # --- 4) compute gradient‐norms via torch.autograd.grad ---
-        # PDE grad‐norm
+
+        # PDE grad-norm (no second-order graph needed)
         grads_pde = torch.autograd.grad(
             loss_pde, params,
-            retain_graph=True, create_graph=True
+            retain_graph=True,        # keep the graph alive for the final backward
+            create_graph=False        # <—— no need for a second-order graph
         )
         G_pde = torch.sqrt(sum(torch.sum(g**2) for g in grads_pde))
-
-        # interface grad‐norm (allow_unused in case loss_if==0)
+        
+        # interface grad-norm
         grads_if = torch.autograd.grad(
             loss_if, params,
-            retain_graph=True, create_graph=True,
+            retain_graph=True,        # keep the graph alive for the final backward
+            create_graph=False,       # <—— no second-order graph
             allow_unused=True
         )
         # replace None→zeros so we can do the norm
@@ -143,12 +146,7 @@ def modelTrainer(config):
         ]
         G_if = torch.sqrt(sum(torch.sum(g**2) for g in grads_if))
 
-        # bc grad‐norm
-        grads_bc = torch.autograd.grad(
-            loss_bc, params,
-            retain_graph=True, create_graph=True,
-            allow_unused=True
-        )
+        grads_bc = torch.autograd.grad(loss_bc, params, retain_graph=True, create_graph=False, allow_unused=True)
         grads_bc = [
             g if g is not None else torch.zeros_like(p)
             for g, p in zip(grads_bc, params)
