@@ -57,7 +57,7 @@ coords_fem, V_vals_fem = run_fem(electrode_mesh=mesh, coords=graph.pos.cpu().num
 err_V = compute_steady_error(predicted_results, V_vals_fem, test_config)
 print(f"Rel L2 error Voltage:     {err_V:.3e}")
 
-render_results(predicted_results, V_vals_fem, graph, filename="NNvsFEM.png")
+render_results(predicted_results, V_vals_fem, graph, filename="Left_Boundary.png")
 
 
 
