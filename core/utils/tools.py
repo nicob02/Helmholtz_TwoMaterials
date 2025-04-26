@@ -81,13 +81,21 @@ def modelTrainer(config):
 
     # grab list of trainable params once
     params = [p for p in model.parameters() if p.requires_grad]
-
+      # ---- SANITY CHECK COUNTS ----
+    n_left = int(left.sum().item())
+    n_if1  = int(if1.sum().item())
+    n_if2  = int(if2.sum().item())
+    print(f"Sanity check: # left‐BC nodes = {n_left}, "
+          f"# inner‐interface nodes = {n_if1}, "
+          f"# outer‐interface nodes = {n_if2}")
+    
     for epoch in range(1, config.epchoes + 1):
 
         optimizer.zero_grad()
 
         # --- forward PDE + BC/interface losses ---
-        u_hat      = model(graph)                       # [N,1]
+        raw   = model(graph)                     # [N,1]
+        u_hat = physics._ansatz_u(graph, raw)    # hard-clamp u=0 on ∂Ω
         r_pde, grad_u = physics.pde_residual(graph, u_hat)
 
         # 1) PDE loss
@@ -117,13 +125,13 @@ def modelTrainer(config):
         )
 
         loss_if = loss_if1 + loss_if2
-
+"""
         # 3) left‐boundary Dirichlet loss
         #    u_hat[left] should be zero
         loss_bc = torch.mean(u_hat[left]**2) \
                   if left.any() \
                   else torch.tensor(0.0, device=device)
-
+"""
         # --- 4) compute gradient‐norms via torch.autograd.grad ---
         # PDE grad‐norm
         grads_pde = torch.autograd.grad(
@@ -144,7 +152,7 @@ def modelTrainer(config):
             for g, p in zip(grads_if, params)
         ]
         G_if = torch.sqrt(sum(torch.sum(g**2) for g in grads_if))
-
+"""
         # bc grad‐norm
         grads_bc = torch.autograd.grad(
             loss_bc, params,
@@ -156,20 +164,19 @@ def modelTrainer(config):
             for g, p in zip(grads_bc, params)
         ]
         G_bc = torch.sqrt(sum(torch.sum(g**2) for g in grads_bc))
-
+"""
         # --- 5) form NTK‐style weights ---
         eps = 1e-8
         lambda_if = (loss_if  / (loss_pde + eps)) * (G_if  / (G_pde + eps))
-        lambda_bc = (loss_bc  / (loss_pde + eps)) * (G_bc  / (G_pde + eps))
+       # lambda_bc = (loss_bc  / (loss_pde + eps)) * (G_bc  / (G_pde + eps))
 
         # clamp for stability & detach so they aren’t treated as learnable
         lambda_if = lambda_if.clamp(1e-3, 1e3).detach()
-        lambda_bc = lambda_bc.clamp(1e-3, 1e3).detach()
+     #   lambda_bc = lambda_bc.clamp(1e-3, 1e3).detach()
 
         # --- 6) total loss & backward ---
-        L_total = loss_pde \
-                + lambda_if * loss_if \
-                + lambda_bc * loss_bc
+        #L_total = loss_pde + lambda_if * loss_if + lambda_bc * loss_bc
+        L_total = loss_pde + lambda_if * loss_if
 
         if epoch % 100 == 0:
             print(f"[Epoch {epoch:4d}] "
@@ -192,8 +199,8 @@ def modelTester(config):
     physics = config.func_main
     
     graph = physics.graph_modify(graph)
-    u_hat     = model(graph)                           # [N,1]
-   # u_hat   = physics._ansatz_u(graph, raw)          # enforce Dirichlet @ x=0
+    raw     = model(graph)                           # [N,1]
+    u_hat   = physics._ansatz_u(graph, raw)          # enforce Dirichlet @ x=0
     return u_hat.cpu().numpy()      # shape [N,1]
 def compute_steady_error(u_pred, u_exact, config):
     # 1) Convert predictions to NumPy
