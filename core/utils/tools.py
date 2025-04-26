@@ -101,9 +101,6 @@ def modelTrainer(config):
         jump  = (eps_in - eps_out) * (gi * n).sum(dim=1)
         loss_if = torch.mean(jump**2) if interface.any() else torch.tensor(0.0, device=device)
 
-        # c) left‐Dirichlet
-        loss_bc = torch.mean(u_hat[left]**2) if left.any() else torch.tensor(0.0, device=device)
-
         # d) top/bottom Neumann: ∂u/∂n = 0 → here simply ∂u/∂y = 0
         #    grad_u[:,1] is ∂u/∂y
         dy_vals     = grad_u[:, 1]
@@ -124,10 +121,6 @@ def modelTrainer(config):
         grads_if = [g if g is not None else torch.zeros_like(p) for g,p in zip(grads_if, params)]
         G_if = torch.sqrt(sum(torch.sum(g**2) for g in grads_if))
 
-        # Dirichlet grad‐norm
-        grads_bc = torch.autograd.grad(loss_bc, params, retain_graph=True, create_graph=True, allow_unused=True)
-        grads_bc = [g if g is not None else torch.zeros_like(p) for g,p in zip(grads_bc, params)]
-        G_bc = torch.sqrt(sum(torch.sum(g**2) for g in grads_bc))
 
         # Neumann grad‐norm
         grads_neu = torch.autograd.grad(loss_neu, params, retain_graph=True, create_graph=True, allow_unused=True)
@@ -136,22 +129,18 @@ def modelTrainer(config):
 
         # NTK weights
         λ_if  = (loss_if  / (loss_pde + eps)) * (G_if  / (G_pde + eps))
-        λ_bc  = (loss_bc  / (loss_pde + eps)) * (G_bc  / (G_pde + eps))
         λ_neu = (loss_neu / (loss_pde + eps)) * (G_neu / (G_pde + eps))
 
         # clamp & detach so they don’t propagate gradients
         λ_if  = λ_if.clamp(1e-3,1e3).detach()
-        λ_bc  = λ_bc.clamp(1e-3,1e3).detach()
         λ_neu = λ_neu.clamp(1e-3,1e3).detach()
 
         # f) total loss
         L = loss_pde + λ_if  * loss_if  + λ_neu * loss_neu
-        #L = loss_pde + λ_if  * loss_if  + λ_bc  * loss_bc  + λ_neu * loss_neu
 
         if epoch % 100 == 0:
             print(f"[{epoch:4d}] PDE={loss_pde:.3e}  "
                   f"IF={loss_if:.3e}(λ={λ_if:.1e})  "
-                  f"BC={loss_bc:.3e}(λ={λ_bc:.1e})  "
                   f"NEU={loss_neu:.3e}(λ={λ_neu:.1e})")
 
         # g) backward & step
