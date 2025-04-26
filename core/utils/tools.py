@@ -81,14 +81,7 @@ def modelTrainer(config):
 
     # grab list of trainable params once
     params = [p for p in model.parameters() if p.requires_grad]
-      # ---- SANITY CHECK COUNTS ----
-    n_left = int(left.sum().item())
-    n_if1  = int(if1.sum().item())
-    n_if2  = int(if2.sum().item())
-    print(f"Sanity check: # left‐BC nodes = {n_left}, "
-          f"# inner‐interface nodes = {n_if1}, "
-          f"# outer‐interface nodes = {n_if2}")
-    
+
     for epoch in range(1, config.epchoes + 1):
 
         optimizer.zero_grad()
