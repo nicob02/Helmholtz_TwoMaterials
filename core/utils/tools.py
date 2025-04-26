@@ -47,7 +47,9 @@ def parse_config(file='config.json'):
 
    import torch
 
+
 def modelTrainer(config):
+    
     model     = config.model
     optimizer = config.optimizer
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer,
