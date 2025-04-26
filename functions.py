@@ -54,18 +54,21 @@ class ElectroThermalFunc():
      return graph
  
  def _ansatz_u(self, graph, u_raw):
-     """
-     Enforce u(0) = cos(k_outer x) exactly, with D(x)=tanh(π x) vanishing
-     on x=0 so that the NN output u_raw is only learned in the interior.
-     """
-     x = graph.pos[:, 0:1]   # [N,1]
-     # detach both so no extra graph edges through pos
-     with torch.no_grad():
-         G = torch.cos(self.k_outer * x)      # boundary shape
-         D = torch.tanh(math.pi * x)          # vanishes at x=0
- 
-     # final ansatz: G + D * NN
-     return G + D * u_raw
+    """
+    Hard‐enforce u(0,y)=1, u(1,y)=0 via
+       G(x,y)=1−x,   D(x,y)=x*(1−x),
+    but detach both so they don't build extra graph nodes.
+    """
+    # pull out the x‐coordinate
+    x = graph.pos[:, 0:1]    # shape [N,1]
+
+    # compute G and D, then detach so no grads flow through them
+    G = (1.0 - x).detach()           # guide function, exact on x=0→1, x=1→0
+    D = (x * (1.0 - x)).detach()     # bump, zero at x=0 and x=1
+
+    # our final ansatz: G + D * u_raw
+    return G + D * u_raw
+
  
  def pde_residual(self, graph, u):
      """
