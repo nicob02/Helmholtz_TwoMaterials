@@ -11,15 +11,15 @@ device = torch.device(0)
 out_ndim = 1
 ckptpath = 'checkpoint/simulator_%s.pth' % Func.func_name  
 
-# 2) physics helper
-func_main = Func(eps=(4.0,2.0,1.0),
-    k  =(20.0,10.0, 5.0),
-    center=(0.5,0.5),
-    r1=0.15,
-    r2=0.30,
-    bc_tol=1e-2
+func_main = ElectroThermalFunc(
+    eps_inner = 4.0,     # ε inside radius r1
+    eps_outer = 1.0,     # ε outside
+    k_inner   = 20.0,    # k inside
+    k_outer   = 5.0,     # k outside
+    center    = (0.5, 0.5),
+    r1        = 0.30,    # interface radius
+    bc_tol    = 1e-2     # boundary tolerance
 )
-
 
 model = msgPassing(message_passing_num=3, node_input_size=out_ndim+3, edge_input_size=3, 
                    ndim=out_ndim, device=device, model_dir=ckptpath)    # Mess with MPN# to 2 or 3, +3 comes from source + BC
