@@ -11,7 +11,7 @@ device = torch.device(0)
 out_ndim = 1
 ckptpath = 'checkpoint/simulator_%s.pth' % Func.func_name  
 
-func_main = ElectroThermalFunc(
+func_main = Func(
     eps_inner = 4.0,     # ε inside radius r1
     eps_outer = 1.0,     # ε outside
     k_inner   = 20.0,    # k inside
