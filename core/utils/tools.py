@@ -138,8 +138,8 @@ def modelTrainer(config):
         if epoch % 100 == 0:
              print(f"[Epoch {epoch:4d}] "
                    f"PDE={loss_pde.item():.3e}, "
-                   f"NEU={loss_neu.item():.3e} (λ_bc={λ_neu:.1e})")
-                   f"IF={loss_if.item():.3e} (λ_if={λ_if:.1e}), ")
+                   f"NEU={loss_neu.item():.3e} (λ_neu={λ_neu:.1e})"
+                   f"IF={loss_if.item():.3e} (λ_if={λ_if:.1e}) ")
 
         # g) backward & step
         L.backward(retain_graph=True)
