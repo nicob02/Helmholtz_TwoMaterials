@@ -84,7 +84,7 @@ def modelTrainer(config):
     # 3) get trainable params
     params = [p for p in model.parameters() if p.requires_grad]
             
-    
+    N_tot = graph.pos.shape[0]
     M_if  = interface.sum().float()   # number of interface points
     M_bc  = left.sum().float()        # number of BC points
     # 4) training loop
