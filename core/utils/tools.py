@@ -112,7 +112,7 @@ def modelTrainer(config):
         loss_neu_top    = torch.mean(top_vals**2)    if top.any()    else torch.tensor(0.0, device=device)
         loss_neu_bottom = torch.mean(bottom_vals**2) if bottom.any() else torch.tensor(0.0, device=device)
         loss_neu = loss_neu_top + loss_neu_bottom
-
+        eps = 1e-8
         grads_pde = torch.autograd.grad(loss_pde, params, retain_graph=True, create_graph=True)
         G_pde = torch.sqrt(sum(torch.sum(g**2) for g in grads_pde))
  
@@ -130,12 +130,7 @@ def modelTrainer(config):
     
         # f) total loss
         L = loss_pde + λ_if  * loss_if  + λ_neu * loss_neu
-        
-
-
-        # f) total loss
- 
-        L = loss_pde + loss_if  + loss_neu
+  
         if epoch % 100 == 0:
             print(f"[{epoch:4d}] PDE={loss_pde:.3e}  "
                   f"IF={loss_if:.3e}  "
