@@ -113,42 +113,17 @@ def modelTrainer(config):
         loss_neu_bottom = torch.mean(bottom_vals**2) if bottom.any() else torch.tensor(0.0, device=device)
         loss_neu = loss_neu_top + loss_neu_bottom
 
-        # e) compute NTK‐style weights for all four
-        eps = 1e-8
-        # PDE grad‐norm
-        grads_pde = torch.autograd.grad(loss_pde, params, retain_graph=True, create_graph=True)
-        G_pde = torch.sqrt(sum(torch.sum(g**2) for g in grads_pde))
-
-        # interface grad‐norm
-        grads_if = torch.autograd.grad(loss_if, params, retain_graph=True, create_graph=True, allow_unused=True)
-        grads_if = [g if g is not None else torch.zeros_like(p) for g,p in zip(grads_if, params)]
-        G_if = torch.sqrt(sum(torch.sum(g**2) for g in grads_if))
-
-
-        # Neumann grad‐norm
-        grads_neu = torch.autograd.grad(loss_neu, params, retain_graph=True, create_graph=True, allow_unused=True)
-        grads_neu = [g if g is not None else torch.zeros_like(p) for g,p in zip(grads_neu, params)]
-        G_neu = torch.sqrt(sum(torch.sum(g**2) for g in grads_neu))
-
-        # NTK weights
-        λ_if  = (loss_if  / (loss_pde + eps)) * (G_if  / (G_pde + eps))
-        λ_neu = (loss_neu / (loss_pde + eps)) * (G_neu / (G_pde + eps))
         
-        # --- 2) normalize so everything is "per‐domain‐node" ---
-        #    i.e. scale the M-point means into N-point means
-        scale_if = (M_if / N_tot)
-        scale_neu = (M_neu / N_tot)
         
-        loss_if = scale_if * loss_if
-        loss_neu = scale_neu * loss_neu
+
 
         # f) total loss
-        L = loss_pde + λ_if  * loss_if  + λ_neu * loss_neu
-        #L = loss_pde + loss_if  + loss_neu
+ 
+        L = loss_pde + loss_if  + loss_neu
         if epoch % 100 == 0:
             print(f"[{epoch:4d}] PDE={loss_pde:.3e}  "
-                  f"IF={loss_if:.3e}(λ={λ_if:.1e})  "
-                  f"NEU={loss_neu:.3e}(λ={λ_neu:.1e})")
+                  f"IF={loss_if:.3e}  "
+                  f"NEU={loss_neu:.3e}")
 
         # g) backward & step
         L.backward(retain_graph=True)
