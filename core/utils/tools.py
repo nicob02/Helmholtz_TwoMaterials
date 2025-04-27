@@ -130,8 +130,8 @@ def modelTrainer(config):
         λ_if  = ((loss_if  / (loss_pde + eps)) * (G_if  / (G_pde + eps))).detach()
         λ_neu = ((loss_neu / (loss_pde + eps)) * (G_neu / (G_pde + eps))).detach()
 
-        λ_if  = λ_if.clamp(1e-2,1e6).detach()
-        λ_neu = λ_neu.clamp(1e-2,1e6).detach()
+        λ_if  = λ_if.clamp(2,1e6).detach()
+        λ_neu = λ_neu.clamp(0.1,1e6).detach()
         # f) total loss
         L = loss_pde + λ_if  * loss_if  + λ_neu * loss_neu
   
