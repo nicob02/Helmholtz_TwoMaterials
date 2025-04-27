@@ -123,7 +123,9 @@ def modelTrainer(config):
     
         # Neumann grad‐norm
         grads_neu = torch.autograd.grad(loss_neu, params, retain_graph=True, create_graph=True, allow_unused=True)
-    
+        grads_neu = [g if g is not None else torch.zeros_like(p) for g,p in zip(grads_neu, params)]
+        G_neu = torch.sqrt(sum(torch.sum(g**2) for g in grads_neu))
+        
         # NTK weights
         λ_if  = ((loss_if  / (loss_pde + eps)) * (G_if  / (G_pde + eps))).detach()
         λ_neu = ((loss_neu / (loss_pde + eps)) * (G_neu / (G_pde + eps))).detach()
