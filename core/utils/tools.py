@@ -125,12 +125,8 @@ def modelTrainer(config):
         grads_neu = torch.autograd.grad(loss_neu, params, retain_graph=True, create_graph=True, allow_unused=True)
     
         # NTK weights
-        λ_if  = (loss_if  / (loss_pde + eps)) * (G_if  / (G_pde + eps))
-        λ_neu = (loss_neu / (loss_pde + eps)) * (G_neu / (G_pde + eps))
-    
-        # clamp & detach so they don’t propagate gradients
-        λ_if  = λ_if.clamp(1e-6,1e6).detach()
-        λ_neu = λ_neu.clamp(1e-6,1e6).detach()
+        λ_if  = (loss_if  / (loss_pde + eps)) * (G_if  / (G_pde + eps)).detach()
+        λ_neu = (loss_neu / (loss_pde + eps)) * (G_neu / (G_pde + eps)).detach()
     
         # f) total loss
         L = loss_pde + λ_if  * loss_if  + λ_neu * loss_neu
