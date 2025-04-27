@@ -86,7 +86,7 @@ def modelTrainer(config):
             
     N_tot = graph.pos.shape[0]
     M_if  = interface.sum().float()   # number of interface points
-    M_neu  = bottom.sum() + top.sum       # number of Neu points
+    M_neu  = bottom.sum().float() + top.sum().float()      # number of Neu points
     # 4) training loop
     for epoch in range(1, config.epchoes+1):
         optimizer.zero_grad()
