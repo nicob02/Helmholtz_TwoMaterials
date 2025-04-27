@@ -136,8 +136,8 @@ def modelTrainer(config):
         λ_neu = λ_neu.clamp(1e-3,1e3).detach()
 
         # f) total loss
-        L = loss_pde + λ_if  * loss_if  + λ_neu * loss_neu
-
+        #L = loss_pde + λ_if  * loss_if  + λ_neu * loss_neu
+        L = loss_pde + loss_if  + loss_neu
         if epoch % 100 == 0:
             print(f"[{epoch:4d}] PDE={loss_pde:.3e}  "
                   f"IF={loss_if:.3e}(λ={λ_if:.1e})  "
