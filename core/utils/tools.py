@@ -113,7 +113,27 @@ def modelTrainer(config):
         loss_neu_bottom = torch.mean(bottom_vals**2) if bottom.any() else torch.tensor(0.0, device=device)
         loss_neu = loss_neu_top + loss_neu_bottom
 
-        
+        grads_pde = torch.autograd.grad(loss_pde, params, retain_graph=True, create_graph=True)
+        G_pde = torch.sqrt(sum(torch.sum(g**2) for g in grads_pde))
+ 
+        # interface grad‐norm
+        grads_if = torch.autograd.grad(loss_if, params, retain_graph=True, create_graph=True, allow_unused=True)
+        grads_if = [g if g is not None else torch.zeros_like(p) for g,p in zip(grads_if, params)]
+        G_if = torch.sqrt(sum(torch.sum(g**2) for g in grads_if))
+    
+        # Neumann grad‐norm
+        grads_neu = torch.autograd.grad(loss_neu, params, retain_graph=True, create_graph=True, allow_unused=True)
+    
+        # NTK weights
+        λ_if  = (loss_if  / (loss_pde + eps)) * (G_if  / (G_pde + eps))
+        λ_neu = (loss_neu / (loss_pde + eps)) * (G_neu / (G_pde + eps))
+    
+        # clamp & detach so they don’t propagate gradients
+        λ_if  = λ_if.clamp(1e-6,1e6).detach()
+        λ_neu = λ_neu.clamp(1e-6,1e6).detach()
+    
+        # f) total loss
+        L = loss_pde + λ_if  * loss_if  + λ_neu * loss_neu
         
 
 
