@@ -86,7 +86,7 @@ def modelTrainer(config):
             
     N_tot = graph.pos.shape[0]
     M_if  = interface.sum().float()   # number of interface points
-    M_bc  = left.sum().float()        # number of BC points
+    M_neu  = bottom.sum().float() + top.sum.float()       # number of Neu points
     # 4) training loop
     for epoch in range(1, config.epchoes+1):
         optimizer.zero_grad()
@@ -137,10 +137,10 @@ def modelTrainer(config):
         # --- 2) normalize so everything is "per‐domain‐node" ---
         #    i.e. scale the M-point means into N-point means
         scale_if = (M_if / N_tot)
-        scale_bc = (M_bc / N_tot)
+        scale_neu = (M_neu / N_tot)
         
         loss_if = scale_if * loss_if
-        loss_bc = scale_bc * loss_bc
+        loss_neu = scale_neu * loss_neu
 
         # f) total loss
         L = loss_pde + λ_if  * loss_if  + λ_neu * loss_neu
