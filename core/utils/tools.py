@@ -83,7 +83,10 @@ def modelTrainer(config):
 
     # 3) get trainable params
     params = [p for p in model.parameters() if p.requires_grad]
-
+            
+    
+    M_if  = interface.sum().float()   # number of interface points
+    M_bc  = left.sum().float()        # number of BC points
     # 4) training loop
     for epoch in range(1, config.epchoes+1):
         optimizer.zero_grad()
@@ -130,8 +133,14 @@ def modelTrainer(config):
         # NTK weights
         λ_if  = (loss_if  / (loss_pde + eps)) * (G_if  / (G_pde + eps))
         λ_neu = (loss_neu / (loss_pde + eps)) * (G_neu / (G_pde + eps))
-
-
+        
+        # --- 2) normalize so everything is "per‐domain‐node" ---
+        #    i.e. scale the M-point means into N-point means
+        scale_if = (M_if / N_tot)
+        scale_bc = (M_bc / N_tot)
+        
+        loss_if = scale_if * loss_if
+        loss_bc = scale_bc * loss_bc
 
         # f) total loss
         L = loss_pde + λ_if  * loss_if  + λ_neu * loss_neu
