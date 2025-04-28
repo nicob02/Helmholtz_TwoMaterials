@@ -112,6 +112,11 @@ def modelTrainer(config):
         loss_neu_top    = torch.mean(top_vals**2)    if top.any()    else torch.tensor(0.0, device=device)
         loss_neu_bottom = torch.mean(bottom_vals**2) if bottom.any() else torch.tensor(0.0, device=device)
         loss_neu = loss_neu_top + loss_neu_bottom
+
+        # 3) scale
+        loss_if  = (N_tot/M_if)  * loss_if
+        loss_neu = (N_tot/M_neu) * loss_neu
+
         eps = 1e-8
         grads_pde = torch.autograd.grad(loss_pde, params, retain_graph=True, create_graph=True)
         G_pde = torch.sqrt(sum(torch.sum(g**2) for g in grads_pde))
