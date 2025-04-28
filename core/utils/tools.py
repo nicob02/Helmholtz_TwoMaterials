@@ -131,10 +131,10 @@ def modelTrainer(config):
         λ_neu = ((loss_neu / (loss_pde + eps)) * (G_neu / (G_pde + eps))).detach()
 
         if epoch % 100 == 0:
-             print(f"[Epoch {epoch:4d}] "
-                   f"PDE={loss_pde.item():.3e}, "
-                   f"NEU={loss_neu.item():.3e} (λ_neu={λ_neu:.1e})"
-                   f"IF={loss_if.item():.3e} (λ_if={λ_if:.1e}) ")
+            print(f"[Epoch {epoch:4d}] "
+                f"PDE={loss_pde.item():.3e}, "
+                f"NEU={loss_neu.item():.3e} (λ_neu={λ_neu:.1e})"
+                f"IF={loss_if.item():.3e} (λ_if={λ_if:.1e}) ")
         λ_if  = λ_if.clamp(12,1e6).detach()
         λ_neu = λ_neu.clamp(2,1e6).detach()
         # f) total loss
