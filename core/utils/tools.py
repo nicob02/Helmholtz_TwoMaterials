@@ -87,6 +87,9 @@ def modelTrainer(config):
     N_tot = graph.pos.shape[0]
     M_if  = interface.sum().float()   # number of interface points
     M_neu  = bottom.sum().float() + top.sum().float()      # number of Neu points
+
+    λ_if  = 500
+    λ_neu = 50
     # 4) training loop
     for epoch in range(1, config.epchoes+1):
         optimizer.zero_grad()
@@ -113,35 +116,13 @@ def modelTrainer(config):
         loss_neu_bottom = torch.mean(bottom_vals**2) if bottom.any() else torch.tensor(0.0, device=device)
         loss_neu = loss_neu_top + loss_neu_bottom
 
-        # 3) scale
-        loss_if  = (N_tot/M_if)  * loss_if
-        loss_neu = (N_tot/M_neu) * loss_neu
-
-        eps = 1e-8
-        grads_pde = torch.autograd.grad(loss_pde, params, retain_graph=True, create_graph=True)
-        G_pde = torch.sqrt(sum(torch.sum(g**2) for g in grads_pde))
- 
-        # interface grad‐norm
-        grads_if = torch.autograd.grad(loss_if, params, retain_graph=True, create_graph=True, allow_unused=True)
-        grads_if = [g if g is not None else torch.zeros_like(p) for g,p in zip(grads_if, params)]
-        G_if = torch.sqrt(sum(torch.sum(g**2) for g in grads_if))
-    
-        # Neumann grad‐norm
-        grads_neu = torch.autograd.grad(loss_neu, params, retain_graph=True, create_graph=True, allow_unused=True)
-        grads_neu = [g if g is not None else torch.zeros_like(p) for g,p in zip(grads_neu, params)]
-        G_neu = torch.sqrt(sum(torch.sum(g**2) for g in grads_neu))
-        
-        # NTK weights
-        λ_if  = ((loss_if  / (loss_pde + eps)) * (G_if  / (G_pde + eps))).detach()
-        λ_neu = ((loss_neu / (loss_pde + eps)) * (G_neu / (G_pde + eps))).detach()
-
+       
         if epoch % 100 == 0:
             print(f"[Epoch {epoch:4d}] "
                 f"PDE={loss_pde.item():.3e}, "
                 f"NEU={loss_neu.item():.3e} (λ_neu={λ_neu:.1e})"
                 f"IF={loss_if.item():.3e} (λ_if={λ_if:.1e}) ")
-        λ_if  = λ_if.clamp(30,1e6).detach()
-        λ_neu = λ_neu.clamp(2,1e6).detach()
+  
         # f) total loss
         L = loss_pde + λ_if  * loss_if  + λ_neu * loss_neu
   
