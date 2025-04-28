@@ -135,7 +135,7 @@ def modelTrainer(config):
                 f"PDE={loss_pde.item():.3e}, "
                 f"NEU={loss_neu.item():.3e} (λ_neu={λ_neu:.1e})"
                 f"IF={loss_if.item():.3e} (λ_if={λ_if:.1e}) ")
-        λ_if  = λ_if.clamp(12,1e6).detach()
+        λ_if  = λ_if.clamp(30,1e6).detach()
         λ_neu = λ_neu.clamp(2,1e6).detach()
         # f) total loss
         L = loss_pde + λ_if  * loss_if  + λ_neu * loss_neu
