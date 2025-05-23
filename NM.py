@@ -32,7 +32,7 @@ def run_fem(
     electrode_mesh,
     coords=None,
     r1=0.30,
-    eps_inner=2.0, eps_outer=1.0,
+    eps_inner=5.0, eps_outer=1.0,
     k_inner=1.5, k_outer=1.0
 ):
     """
