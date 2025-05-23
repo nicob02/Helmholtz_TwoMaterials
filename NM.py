@@ -32,8 +32,8 @@ def run_fem(
     electrode_mesh,
     coords=None,
     r1=0.30,
-    eps_inner=4.0, eps_outer=1.0,
-    k_inner=20.0, k_outer=5.0
+    eps_inner=2.0, eps_outer=1.0,
+    k_inner=2.0, k_outer=1.0
 ):
     """
     Solve ∇·(ε ∇u) + k^2 u = 0 on [0,1]^2 with one inclusion.
