@@ -12,7 +12,7 @@ out_ndim = 1
 ckptpath = 'checkpoint/simulator_%s.pth' % Func.func_name  
 
 func_main = Func(
-    eps_inner = 2.0,     # ε inside radius r1
+    eps_inner = 15.0,     # ε inside radius r1
     eps_outer = 1.0,     # ε outside
     k_inner   = 2.0,    # k inside
     k_outer   = 1.0,     # k outside
@@ -81,7 +81,7 @@ setattr(train_config, 'graph', graph)
 setattr(train_config, 'model', model)
 setattr(train_config, 'optimizer', optimizer)
 setattr(train_config, 'train_steps', 1)    # 1 train step, extend this in the future to a dynamic source function that changes with time.
-setattr(train_config, 'epchoes', 20)
+setattr(train_config, 'epchoes', 2000)
 setattr(train_config, 'NodeTypesRef', ElectrodeMesh.node_type_ref) 
 setattr(train_config, 'step_times', 1)
 setattr(train_config, 'ndim', out_ndim)
