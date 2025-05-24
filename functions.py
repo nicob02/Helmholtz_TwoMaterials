@@ -10,10 +10,10 @@ class ElectroThermalFunc():
  func_name = "Helmholtz_SingleInterface"
  def __init__(
      self,
-     eps_inner: float = 4.0,
+     eps_inner: float = 15.0,
      eps_outer: float = 1.0,
-     k_inner: float = 20.0,
-     k_outer: float = 5.0,
+     k_inner: float = 2.0,
+     k_outer: float = 1.0,
      center: tuple = (0.5, 0.5),
      r1: float = 0.30,
      bc_tol: float = 1e-3,
