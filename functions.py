@@ -12,7 +12,7 @@ class ElectroThermalFunc():
      self,
      eps_inner: float = 5.0,
      eps_outer: float = 1.0,
-     k_inner: float = 4.0,
+     k_inner: float = 3.0,
      k_outer: float = 1.5,
      center: tuple = (0.5, 0.5),
      r1: float = 0.30,
