@@ -14,7 +14,7 @@ ckptpath = 'checkpoint/simulator_%s.pth' % Func.func_name    #FIGURE THIS OUT
 device = torch.device(0)
 
 func_main = Func(
-    eps_inner = 15.0,     # ε inside radius r1
+    eps_inner = 5.0,     # ε inside radius r1
     eps_outer = 1.0,     # ε outside
     k_inner   = 2.0,    # k inside
     k_outer   = 1.0,     # k outside
