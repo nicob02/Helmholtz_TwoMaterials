@@ -12,7 +12,7 @@ out_ndim = 1
 ckptpath = 'checkpoint/simulator_%s.pth' % Func.func_name  
 
 func_main = Func(
-    eps_inner = 15.0,     # ε inside radius r1
+    eps_inner = 5.0,     # ε inside radius r1
     eps_outer = 1.0,     # ε outside
     k_inner   = 2.0,    # k inside
     k_outer   = 1.0,     # k outside
