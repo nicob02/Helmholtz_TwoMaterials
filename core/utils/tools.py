@@ -88,7 +88,7 @@ def modelTrainer(config):
     M_if  = interface.sum().float()   # number of interface points
     M_neu  = bottom.sum().float() + top.sum().float()      # number of Neu points
 
-    λ_if  = 1e7
+    λ_if  = 1e6
     λ_neu = 1
     # 4) training loop
     for epoch in range(1, config.epchoes+1):
